@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'package:riyazul_parent/shared/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rxdart/rxdart.dart' as rx;
 
 class ParentAuthController extends GetxController {
   var isLoading = false.obs;
@@ -311,38 +312,94 @@ class ParentAuthController extends GetxController {
 
   // Call this after student login is confirmed
   void fetchNotifications(String studentId) {
-    FirebaseFirestore.instance
+    final specificStream = FirebaseFirestore.instance
         .collection('notifications')
         .where('studentId', isEqualTo: studentId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-          notifications.value = snapshot.docs
-              .map((doc) => NotificationModel.fromDoc(doc))
-              .toList();
-          unreadCount.value = notifications.where((n) => !n.isRead).length;
-        });
+        .snapshots();
+
+    final globalStream = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('targetType', isEqualTo: 'all')
+        .snapshots();
+
+    rx.Rx.combineLatest2(specificStream, globalStream, (
+      QuerySnapshot specific,
+      QuerySnapshot global,
+    ) {
+      final List<NotificationModel> combined = [];
+      final Set<String> ids = {};
+
+      void addUnique(QuerySnapshot snap) {
+        for (var doc in snap.docs) {
+          if (!ids.contains(doc.id)) {
+            combined.add(
+              NotificationModel.fromSnapshot(doc, currentStudentId: studentId),
+            );
+            ids.add(doc.id);
+          }
+        }
+      }
+
+      addUnique(specific);
+      addUnique(global);
+
+      combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return combined;
+    }).listen((updatedList) {
+      notifications.value = updatedList;
+      unreadCount.value = updatedList.where((n) => !n.isRead).length;
+    });
   }
 
   // Mark a single notification as read
   Future<void> markAsRead(String notificationId) async {
-    await FirebaseFirestore.instance
-        .collection('notifications')
-        .doc(notificationId)
-        .update({'isRead': true});
+    final notif = notifications.firstWhereOrNull(
+      (n) => n.docId == notificationId,
+    );
+    if (notif == null) return;
+
+    if (notif.targetType == 'all') {
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc(notificationId)
+          .update({
+            'readBy': FieldValue.arrayUnion([currentStudent!.docId]),
+          });
+    } else {
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'isRead': true});
+    }
   }
 
   // Mark all as read
   Future<void> markAllAsRead(String studentId) async {
     final batch = FirebaseFirestore.instance.batch();
-    final unread = await FirebaseFirestore.instance
+
+    // For specific
+    final unreadSpecific = await FirebaseFirestore.instance
         .collection('notifications')
         .where('studentId', isEqualTo: studentId)
         .where('isRead', isEqualTo: false)
         .get();
-    for (var doc in unread.docs) {
+    for (var doc in unreadSpecific.docs) {
       batch.update(doc.reference, {'isRead': true});
     }
+
+    // For global
+    final unreadGlobal = notifications.where(
+      (n) => n.targetType == 'all' && !n.isRead,
+    );
+    for (var notif in unreadGlobal) {
+      final docRef = FirebaseFirestore.instance
+          .collection('notifications')
+          .doc(notif.docId);
+      batch.update(docRef, {
+        'readBy': FieldValue.arrayUnion([studentId]),
+      });
+    }
+
     await batch.commit();
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:riyazul_parent/controllers/parent_auth_controller.dart';
+import 'package:riyazul_parent/controllers/notice_controller.dart';
+import 'package:riyazul_parent/shared/routes.dart';
 import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -16,6 +18,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final ParentAuthController authController =
         Get.find<ParentAuthController>();
+    Get.put(NoticeController());
     final student = authController.currentStudent;
 
     if (student == null) {
@@ -149,6 +152,24 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
           actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => Get.toNamed(AppRoutes.noticeList),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.campaign_outlined,
+                    color: kCream,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: GestureDetector(
@@ -312,7 +333,7 @@ class DashboardScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final notif = controller.notifications[index];
                 return GestureDetector(
-                  onTap: () => controller.markAsRead(notif.id),
+                  onTap: () => controller.markAsRead(notif.docId),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
@@ -381,7 +402,7 @@ class DashboardScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  notif.message,
+                                  notif.title,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,
@@ -1137,7 +1158,7 @@ class DashboardScreen extends StatelessWidget {
                                   padding: EdgeInsets.symmetric(vertical: 10),
                                   child: Divider(height: 1),
                                 ),
-                                const Row(
+                                Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
@@ -1147,6 +1168,40 @@ class DashboardScreen extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
                                         color: Color(0xff2E7D32),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => Get.find<NoticeController>()
+                                          .downloadFeeReceipt(feeTx),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: kNavy.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            Icon(
+                                              Icons.download,
+                                              size: 14,
+                                              color: kNavy,
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Receipt',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: kNavy,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],

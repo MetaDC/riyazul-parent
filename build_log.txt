@@ -1,0 +1,24 @@
+Running Gradle task 'assembleRelease'...                        
+lib/controllers/notice_controller.dart:111:28: Error: The getter 'OpenFile' isn't defined for the type 'NoticeController'.
+ - 'NoticeController' is from 'package:riyazul_parent/controllers/notice_controller.dart' ('lib/controllers/notice_controller.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'OpenFile'.
+          onPressed: () => OpenFile.open(file.path),
+                           ^^^^^^^^
+Target kernel_snapshot_program failed: Exception
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileFlutterBuildRelease'.
+> Process 'command '/Users/diwizon/development/flutter/bin/flutter'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 13s
+Running Gradle task 'assembleRelease'...                           13.8s
+Gradle task assembleRelease failed with exit code 1

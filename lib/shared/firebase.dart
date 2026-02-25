@@ -21,6 +21,8 @@ class FBFireStore {
   static final settings = fb.collection('settings').doc("sets");
   static final totalDays = fb.collection('settings').doc("totaldays");
   static final studentNotes = fb.collection('studentNotes');
+  static final notices = fb.collection('notices');
+  static final notifications = fb.collection('notifications');
 }
 
 class FBStorage {

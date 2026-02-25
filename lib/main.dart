@@ -1,15 +1,29 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:riyazul_parent/controllers/homectrl.dart';
+import 'package:riyazul_parent/controllers/notification_service.dart';
 import 'package:riyazul_parent/controllers/parent_auth_controller.dart';
 import 'package:riyazul_parent/firebase_options.dart';
 import 'package:riyazul_parent/shared/routes.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Handle background message if needed
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Initialize Notification Service
+  await Get.putAsync(() => NotificationService().init());
+
   runApp(const ParentApp());
 }
 
