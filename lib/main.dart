@@ -24,7 +24,7 @@ class _ParentAppState extends State<ParentApp> {
   @override
   void initState() {
     super.initState();
-    Get.put(Homectrl());
+    // Get.put(Homectrl());
     Get.put(ParentAuthController());
   }
 

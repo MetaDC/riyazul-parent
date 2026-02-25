@@ -57,172 +57,400 @@ class DashboardScreen extends StatelessWidget {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 4, // ✅ 4 tabs
       child: Scaffold(
         backgroundColor: const Color(0xffF4F6FB),
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverAppBar(
-              expandedHeight: 190,
-              floating: false,
-              pinned: true,
-              backgroundColor: kNavy,
-              elevation: 0,
-              actions: [
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
+
+        // ── Fixed Top AppBar ─────────────────────────────────────────────
+        appBar: AppBar(
+          backgroundColor: kNavy,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [kNavyDark, kNavyLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -20,
+                  right: -30,
+                  child: Container(
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.05),
                     ),
-                    child: const Icon(Icons.logout, color: kCream, size: 20),
                   ),
-                  onPressed: () => authController.logout(),
                 ),
-                const SizedBox(width: 8),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [kNavyDark, kNavyLight],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                Positioned(
+                  bottom: 10,
+                  left: -20,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kCream.withOpacity(0.05),
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: -20,
-                        right: -30,
-                        child: Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.05),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 30,
-                        left: -20,
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: kCream.withOpacity(0.05),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 55, 20, 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    student.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: kCream,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                  // const SizedBox(height: 4),
-                                  // Row(
-                                  //   children: [
-                                  //     _buildChip('GR: ${student.grNO}'),
-                                  //     const SizedBox(width: 8),
-                                  //     _buildChip(
-                                  //       student.currentSchoolStd ?? 'N/A',
-                                  //     ),
-                                  //   ],
-                                  // ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                ),
+              ],
+            ),
+          ),
+          title: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: kCream,
+                  image: const DecorationImage(
+                    image: AssetImage("assets/images/riyazul.png"),
                   ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: kCreamDark, width: 2),
+                ),
+                // child: const Icon(Icons.person, size: 22, color: kNavy),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "JAMIAH RIYAZUL ULOOM",
+                      // student.name,
+                      // maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: kCream,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    // Text(
+                    //   'GR No: ${student.grNO}',
+                    //   style: TextStyle(
+                    //     color: kCream.withOpacity(0.7),
+                    //     fontSize: 11,
+                    //   ),
+                    // ),
+                  ],
                 ),
               ),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(52),
+            ],
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: GestureDetector(
+                onTap: () => authController.confirmLogout(),
                 child: Container(
-                  color: kNavy,
-                  child: TabBar(
-                    indicatorColor: kCream,
-                    indicatorWeight: 3,
-                    labelColor: kCream,
-                    unselectedLabelColor: Colors.white54,
-                    labelStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontWeight: FontWeight.w400,
-                    ),
-                    tabs: const [
-                      Tab(
-                        icon: Icon(Icons.person_outline, size: 18),
-                        text: 'Profile',
-                      ),
-                      Tab(
-                        icon: Icon(Icons.grading_outlined, size: 18),
-                        text: 'Results',
-                      ),
-                      Tab(
-                        icon: Icon(Icons.receipt_long_outlined, size: 18),
-                        text: 'Fees',
-                      ),
-                    ],
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: const Icon(Icons.logout, color: kCream, size: 20),
                 ),
               ),
             ),
           ],
-          body: TabBarView(
-            children: [
-              _buildProfileSection(student),
-              _buildResultsSection(authController),
-              _buildFeesSection(authController),
+        ),
+
+        // ── Tab Content — 4 children matching 4 tabs ─────────────────────
+        body: TabBarView(
+          children: [
+            _buildProfileSection(student),
+            _buildResultsSection(authController),
+            _buildFeesSection(authController),
+            _buildActivitySection(authController), // ✅ fixed: was missing
+          ],
+        ),
+
+        // ── Bottom TabBar ────────────────────────────────────────────────
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: kNavy,
+            boxShadow: [
+              BoxShadow(
+                color: kNavy.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
+              ),
             ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [kNavyDark, kNavyLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: TabBar(
+                indicatorColor: kCream,
+                indicatorWeight: 3,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: kCream,
+                unselectedLabelColor: Colors.white38,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 12,
+                ),
+                // ✅ Fixed: removed const from tabs list so Obx works
+                tabs: [
+                  const Tab(
+                    icon: Icon(Icons.person_outline, size: 22),
+                    text: 'Profile',
+                    iconMargin: EdgeInsets.only(bottom: 2),
+                  ),
+                  const Tab(
+                    icon: Icon(Icons.grading_outlined, size: 22),
+                    text: 'Results',
+                    iconMargin: EdgeInsets.only(bottom: 2),
+                  ),
+                  const Tab(
+                    icon: Icon(Icons.receipt_long_outlined, size: 22),
+                    text: 'Fees',
+                    iconMargin: EdgeInsets.only(bottom: 2),
+                  ),
+                  // ✅ Fixed: Obx cannot be inside const — removed const
+                  Tab(
+                    iconMargin: const EdgeInsets.only(bottom: 2),
+                    text: 'Activity',
+                    icon: Obx(() {
+                      final count =
+                          Get.find<ParentAuthController>().unreadCount.value;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          const Icon(Icons.notifications_outlined, size: 22),
+                          if (count > 0)
+                            Positioned(
+                              right: -6,
+                              top: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  count > 9 ? '9+' : '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: kCream.withOpacity(0.9),
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
+  // ── ACTIVITY SECTION ──────────────────────────────────────────────────────
+  Widget _buildActivitySection(ParentAuthController controller) {
+    return Obx(() {
+      if (controller.notifications.isEmpty) {
+        return _buildEmptyState(
+          icon: Icons.notifications_none_outlined,
+          message: 'No activity yet.',
+        );
+      }
+      return Column(
+        children: [
+          if (controller.unreadCount.value > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => controller.markAllAsRead(
+                    controller.currentStudent!.docId,
+                  ),
+                  child: Text(
+                    'Mark all as read',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: kNavy.withOpacity(0.7),
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: controller.notifications.length,
+              itemBuilder: (context, index) {
+                final notif = controller.notifications[index];
+                return GestureDetector(
+                  onTap: () => controller.markAsRead(notif.id),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: notif.isRead
+                          ? Colors.white
+                          : kCream.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: notif.isRead ? Colors.grey.shade200 : kCreamDark,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kNavy.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: _notifIconBg(notif.type),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _notifIcon(notif.type),
+                              color: _notifIconColor(notif.type),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        notif.title,
+                                        style: TextStyle(
+                                          fontWeight: notif.isRead
+                                              ? FontWeight.w600
+                                              : FontWeight.bold,
+                                          fontSize: 14,
+                                          color: kNavy,
+                                        ),
+                                      ),
+                                    ),
+                                    if (!notif.isRead)
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  notif.message,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _formatDate(notif.createdAt),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  IconData _notifIcon(String type) {
+    switch (type) {
+      case 'result':
+        return Icons.grading_outlined;
+      case 'fee':
+        return Icons.receipt_rounded;
+      default:
+        return Icons.notifications_outlined;
+    }
+  }
+
+  Color _notifIconBg(String type) {
+    switch (type) {
+      case 'result':
+        return kNavy.withOpacity(0.08);
+      case 'fee':
+        return const Color(0xffE8F5E9);
+      default:
+        return kCream.withOpacity(0.6);
+    }
+  }
+
+  Color _notifIconColor(String type) {
+    switch (type) {
+      case 'result':
+        return kNavy;
+      case 'fee':
+        return const Color(0xff2E7D32);
+      default:
+        return kNavyLight;
+    }
+  }
+
+  String _formatDate(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return DateFormat('dd MMM yyyy').format(dt);
   }
 
   Widget _buildProfileSection(dynamic student) {
@@ -275,6 +503,7 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         student.name,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: kCream,
                           fontSize: 20,
@@ -420,16 +649,15 @@ class DashboardScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: kNavy.withOpacity(0.07),
-                  blurRadius: 16,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              border: Border.all(color: Colors.grey.shade200),
             ),
             child: Theme(
-              data: ThemeData(dividerColor: Colors.transparent),
+              data: ThemeData(
+                dividerColor: Colors.transparent,
+                focusColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
               child: ExpansionTile(
                 tilePadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 childrenPadding: EdgeInsets.zero,
@@ -446,37 +674,13 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   child: const Icon(Icons.grading, color: kCream, size: 22),
                 ),
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        result.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: kNavy,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: kNavy.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        result.totalMarks,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: kNavy,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
+                title: Text(
+                  result.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: kNavy,
+                    fontSize: 15,
+                  ),
                 ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 6),
@@ -500,7 +704,6 @@ class DashboardScreen extends StatelessWidget {
                 iconColor: kNavy,
                 collapsedIconColor: kNavy,
                 children: [
-                  // Remarks banner
                   if (result.remarks.isNotEmpty)
                     Container(
                       width: double.infinity,
@@ -535,10 +738,7 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                   const SizedBox(height: 10),
-
-                  // Column headers
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 14),
                     padding: const EdgeInsets.symmetric(
@@ -563,16 +763,13 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+                        _buildMarkHeader('Marks'),
                         _buildMarkHeader('Sem 1'),
                         _buildMarkHeader('Sem 2'),
-                        _buildMarkHeader('Total'),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 4),
-
-                  // Subject rows
                   ...result.subjects.asMap().entries.map((entry) {
                     final sub = entry.value;
                     final isLast = entry.key == result.subjects.length - 1;
@@ -648,9 +845,9 @@ class DashboardScreen extends StatelessWidget {
                                     ],
                                   ),
                                 ),
+                                _buildMarkCell(sub.subMarks, isTotal: true),
                                 _buildMarkCell(sub.sem1Marks),
                                 _buildMarkCell(sub.sem2Marks),
-                                _buildMarkCell(sub.subMarks, isTotal: true),
                               ],
                             ),
                           ),
@@ -660,8 +857,38 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     );
                   }),
-
-                  const SizedBox(height: 12),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: kNavy.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total Marks',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: kNavy,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          result.totalMarks,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: kNavy,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -721,7 +948,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // ── FEES SECTION ─────────────────────────────────────────────────────────
   Widget _buildFeesSection(ParentAuthController controller) {
     return Obx(() {
       if (controller.studentFees.isEmpty) {
@@ -739,17 +965,16 @@ class DashboardScreen extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
               color: Colors.white,
+              border: Border.all(color: Colors.grey.shade200),
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: kNavy.withOpacity(0.07),
-                  blurRadius: 16,
-                  offset: const Offset(0, 5),
-                ),
-              ],
             ),
             child: Theme(
-              data: ThemeData(dividerColor: Colors.transparent),
+              data: ThemeData(
+                dividerColor: Colors.transparent,
+                focusColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
               child: ExpansionTile(
                 tilePadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 childrenPadding: EdgeInsets.zero,
@@ -766,27 +991,13 @@ class DashboardScreen extends StatelessWidget {
                     size: 24,
                   ),
                 ),
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Receipt #${feeTx.receiptNo.isNotEmpty ? feeTx.receiptNo : "N/A"}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: kNavy,
-                        ),
-                      ),
-                    ),
-                    // Text(
-                    //   'Rs.${feeTx.receivedAmt}',
-                    //   style: const TextStyle(
-                    //     fontWeight: FontWeight.bold,
-                    //     fontSize: 17,
-                    //     color: Color(0xff2E7D32),
-                    //   ),
-                    // ),
-                  ],
+                title: Text(
+                  'Receipt #${feeTx.receiptNo.isNotEmpty ? feeTx.receiptNo : "N/A"}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: kNavy,
+                  ),
                 ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 6),
@@ -794,7 +1005,10 @@ class DashboardScreen extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _buildSmallChip(feeTx.feeType, Icons.category_outlined),
+                      _buildSmallChip(
+                        feeTx.feeDetails[0]['type'],
+                        Icons.category_outlined,
+                      ),
                       _buildSmallChip(
                         feeTx.paymentMode,
                         Icons.credit_card_outlined,
@@ -808,7 +1022,6 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 iconColor: kNavy,
                 collapsedIconColor: kNavy,
-                // ── Expanded detail ─────────────────────────────
                 children: [
                   const Divider(height: 1, thickness: 1),
                   Padding(
@@ -816,7 +1029,6 @@ class DashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Period row
                         _buildTwoColRow(
                           _buildFeeDetailCell(
                             'Period From',
@@ -830,7 +1042,6 @@ class DashboardScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        // Received date + total amount
                         _buildTwoColRow(
                           _buildFeeDetailCell(
                             'Received On',
@@ -845,8 +1056,6 @@ class DashboardScreen extends StatelessWidget {
                             Icons.account_balance_wallet_outlined,
                           ),
                         ),
-
-                        // Fee breakdown list
                         if (feeTx.feeDetails.isNotEmpty) ...[
                           const SizedBox(height: 14),
                           Container(
@@ -883,7 +1092,7 @@ class DashboardScreen extends StatelessWidget {
                                   final isLast =
                                       e.key == feeTx.feeDetails.length - 1;
                                   final name =
-                                      detail['name']?.toString() ??
+                                      detail['type']?.toString() ??
                                       detail['feeName']?.toString() ??
                                       '';
                                   final amt =
@@ -928,23 +1137,15 @@ class DashboardScreen extends StatelessWidget {
                                   padding: EdgeInsets.symmetric(vertical: 10),
                                   child: Divider(height: 1),
                                 ),
-                                Row(
+                                const Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Received',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
-                                        color: Color(0xff2E7D32),
-                                      ),
-                                    ),
-                                    Text(
-                                      'Rs.${feeTx.receivedAmt}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
                                         color: Color(0xff2E7D32),
                                       ),
                                     ),
@@ -954,8 +1155,6 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                         ],
-
-                        // Remarks
                         if (feeTx.remarks.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Container(

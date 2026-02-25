@@ -13,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _grNoController = TextEditingController();
+  final _grFocusNode = FocusNode();
   DateTime? _selectedDate;
   final ParentAuthController _authController = Get.find<ParentAuthController>();
 
@@ -44,10 +45,14 @@ class _LoginScreenState extends State<LoginScreen>
   void dispose() {
     _animController.dispose();
     _grNoController.dispose();
+    _grFocusNode.dispose();
     super.dispose();
   }
 
   void _presentDatePicker() {
+    // Dismiss keyboard first
+    FocusScope.of(context).unfocus();
+
     showDatePicker(
       context: context,
       initialDate: DateTime(2010),
@@ -68,8 +73,22 @@ class _LoginScreenState extends State<LoginScreen>
       },
     ).then((pickedDate) {
       if (pickedDate == null) return;
-      setState(() => _selectedDate = pickedDate);
+      // Normalize to UTC midnight — consistent with how DOB is stored/compared
+      setState(
+        () => _selectedDate = DateTime.utc(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+        ),
+      );
     });
+  }
+
+  void _onGrSubmitted(String value) {
+    if (value.trim().isNotEmpty) {
+      // Automatically open date picker after GR is entered
+      _presentDatePicker();
+    }
   }
 
   void _submitLogin() {
@@ -146,18 +165,16 @@ class _LoginScreenState extends State<LoginScreen>
                         padding: const EdgeInsets.fromLTRB(32, 48, 32, 0),
                         child: Column(
                           children: [
-                            // Logo container
                             Container(
                               width: 90,
                               height: 90,
                               decoration: BoxDecoration(
                                 color: kCream,
                                 shape: BoxShape.circle,
-                                image: DecorationImage(
+                                image: const DecorationImage(
                                   image: AssetImage(
                                     "assets/images/riyazul.png",
                                   ),
-                                  // fit: BoxFit.cover,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -167,22 +184,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ],
                               ),
-                              // child: const Icon(
-                              //   Icons.family_restroom,
-                              //   size: 48,
-                              //   color: kNavy,
-                              // ),
                             ),
                             const SizedBox(height: 24),
-                            // const Text(
-                            //   'Riyazul Parent',
-                            //   style: TextStyle(
-                            //     fontSize: 14,
-                            //     fontWeight: FontWeight.w600,
-                            //     color: kCream,
-                            //     letterSpacing: 3,
-                            //   ),
-                            // ),
                             const SizedBox(height: 6),
                             const Text(
                               'Parent Login',
@@ -225,11 +228,12 @@ class _LoginScreenState extends State<LoginScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // GR Number field
+                            // ── Step 1: GR Number ──────────────────────────
                             _buildLabel('GR Number'),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _grNoController,
+                              focusNode: _grFocusNode,
                               style: const TextStyle(
                                 color: kNavy,
                                 fontWeight: FontWeight.w600,
@@ -238,15 +242,17 @@ class _LoginScreenState extends State<LoginScreen>
                               cursorColor: Colors.black,
                               decoration: _inputDecoration(
                                 hint: 'Enter GR No. (e.g. 101)',
-
                                 icon: Icons.badge_outlined,
                               ),
                               keyboardType: TextInputType.text,
+                              textInputAction: TextInputAction.done,
+                              // Auto-open date picker on done
+                              onSubmitted: _onGrSubmitted,
                             ),
 
                             const SizedBox(height: 22),
 
-                            // DOB field
+                            // ── Step 2: Date of Birth (tap or auto-opens) ──
                             _buildLabel('Date of Birth'),
                             const SizedBox(height: 8),
                             InkWell(
@@ -278,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                             const SizedBox(height: 32),
 
-                            // Login button
+                            // ── Step 3: Submit ─────────────────────────────
                             Obx(
                               () => AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
@@ -355,10 +361,9 @@ class _LoginScreenState extends State<LoginScreen>
 
                             const SizedBox(height: 20),
 
-                            // Footer note
                             Center(
                               child: Text(
-                                'Contact Riyzaul admin if you need help',
+                                'Contact Riyazul admin if you need help',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey.shade500,
@@ -371,7 +376,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                       const SizedBox(height: 32),
 
-                      // Bottom tagline
                       Text(
                         '© Riyazul Academy',
                         style: TextStyle(

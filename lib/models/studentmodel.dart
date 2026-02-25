@@ -1,5 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Converts a Firestore Timestamp DOB to a UTC-midnight DateTime.
+/// Using .toDate() is timezone-sensitive — e.g. a DOB stored as midnight
+/// in IST becomes 18:30 the *previous day* in UTC, so a UK device would
+/// parse it as the wrong date. Reading the UTC components directly avoids this.
+DateTime _dobFromTimestamp(Timestamp? ts) {
+  if (ts == null) return DateTime.utc(2000);
+  final d = ts.toDate(); // Use local time components to avoid date shift
+  return DateTime.utc(d.year, d.month, d.day);
+}
+
 class Studentmodel {
   final String docId;
   final String grNO;
@@ -71,8 +81,9 @@ class Studentmodel {
       'feeRemarks': feeRemarks,
       'feeType': feeType,
       'isActive': isActive,
-      'deactivatedAt':
-          deactivatedAt != null ? Timestamp.fromDate(deactivatedAt!) : null,
+      'deactivatedAt': deactivatedAt != null
+          ? Timestamp.fromDate(deactivatedAt!)
+          : null,
     };
   }
 
@@ -83,7 +94,7 @@ class Studentmodel {
       name: json['name'],
       addressHouseNo: json['addressHouseNo'],
       addressHouseArea: json['addressHouseArea'],
-      dob: (json['dob'] as Timestamp).toDate(),
+      dob: _dobFromTimestamp(json['dob'] as Timestamp?),
       phoneNumber: json['phoneNumber'],
       email: json['email'],
       isMale: json['isMale'] ?? false,
@@ -99,10 +110,9 @@ class Studentmodel {
       feeRemarks: json['feeRemarks'] ?? '',
       feeType: json['feeType'],
       isActive: json['isActive'] ?? true,
-      deactivatedAt:
-          json['deactivatedAt'] != null
-              ? (json['deactivatedAt'] as Timestamp).toDate()
-              : null,
+      deactivatedAt: json['deactivatedAt'] != null
+          ? (json['deactivatedAt'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -115,7 +125,7 @@ class Studentmodel {
       name: data['name'] ?? '',
       addressHouseNo: data['addressHouseNo'] ?? '',
       addressHouseArea: data['addressHouseArea'] ?? '',
-      dob: (data['dob'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      dob: _dobFromTimestamp(data['dob'] as Timestamp?),
       phoneNumber: data['phoneNumber'] ?? '',
       email: data['email'],
       isMale: data['isMale'] ?? false,
@@ -134,10 +144,9 @@ class Studentmodel {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       feeRemarks: data['feeRemarks'] ?? '',
       feeType: data['feeType'] ?? 'monthly',
-      deactivatedAt:
-          data['deactivatedAt'] != null
-              ? (data['deactivatedAt'] as Timestamp).toDate()
-              : null,
+      deactivatedAt: data['deactivatedAt'] != null
+          ? (data['deactivatedAt'] as Timestamp).toDate()
+          : null,
     );
   }
 
