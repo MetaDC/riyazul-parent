@@ -59,7 +59,13 @@ class DashboardScreen extends StatelessWidget {
       );
     }
 
+    int initialTabIndex = 0;
+    if (Get.arguments != null && Get.arguments is Map) {
+      initialTabIndex = Get.arguments['tab'] ?? 0;
+    }
+
     return DefaultTabController(
+      initialIndex: initialTabIndex,
       length: 4, // ✅ 4 tabs
       child: Scaffold(
         backgroundColor: const Color(0xffF4F6FB),
@@ -127,18 +133,18 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      "JAMIAH RIYAZUL ULOOM",
-                      // student.name,
-                      // maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: kCream,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
+                    // Text(
+                    //   "JAMIAH RIYAZUL ULOOM",
+                    //   // student.name,
+                    //   // maxLines: 1,
+                    //   overflow: TextOverflow.ellipsis,
+                    //   style: const TextStyle(
+                    //     color: kCream,
+                    //     fontSize: 18,
+                    //     fontWeight: FontWeight.bold,
+                    //     letterSpacing: 0.3,
+                    //   ),
+                    // ),
                     // Text(
                     //   'GR No: ${student.grNO}',
                     //   style: TextStyle(
@@ -333,7 +339,22 @@ class DashboardScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final notif = controller.notifications[index];
                 return GestureDetector(
-                  onTap: () => controller.markAsRead(notif.docId),
+                  onTap: () {
+                    controller.markAsRead(notif.docId);
+
+                    if (notif.type == 'fee') {
+                      DefaultTabController.of(context).animateTo(2);
+                    } else if (notif.type == 'result') {
+                      DefaultTabController.of(context).animateTo(1);
+                    } else {
+                      // It's a notice or some general broadcast
+                      Get.toNamed(AppRoutes.noticeList);
+                      // Get.toNamed(
+                      //   AppRoutes.noticeDetail,
+                      //   arguments: notif.docId,
+                      // );
+                    }
+                  },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
@@ -1026,10 +1047,11 @@ class DashboardScreen extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _buildSmallChip(
-                        feeTx.feeDetails[0]['type'],
-                        Icons.category_outlined,
-                      ),
+                      if (feeTx.feeDetails.isNotEmpty)
+                        _buildSmallChip(
+                          feeTx.feeDetails[0]['type'] ?? 'Fee',
+                          Icons.category_outlined,
+                        ),
                       _buildSmallChip(
                         feeTx.paymentMode,
                         Icons.credit_card_outlined,
@@ -1173,36 +1195,55 @@ class DashboardScreen extends StatelessWidget {
                                     GestureDetector(
                                       onTap: () => Get.find<NoticeController>()
                                           .downloadFeeReceipt(feeTx),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: kNavy.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
+                                      child: Obx(() {
+                                        final isDownloading =
+                                            Get.find<NoticeController>()
+                                                .isLoading
+                                                .value;
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
                                           ),
-                                        ),
-                                        child: const Row(
-                                          children: [
-                                            Icon(
-                                              Icons.download,
-                                              size: 14,
-                                              color: kNavy,
+                                          decoration: BoxDecoration(
+                                            color: kNavy.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
                                             ),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Receipt',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: kNavy,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              if (isDownloading)
+                                                const SizedBox(
+                                                  width: 14,
+                                                  height: 14,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: kNavy,
+                                                      ),
+                                                )
+                                              else
+                                                const Icon(
+                                                  Icons.download,
+                                                  size: 14,
+                                                  color: kNavy,
+                                                ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                isDownloading
+                                                    ? 'Downloading'
+                                                    : 'Receipt',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: kNavy,
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                            ],
+                                          ),
+                                        );
+                                      }),
                                     ),
                                   ],
                                 ),

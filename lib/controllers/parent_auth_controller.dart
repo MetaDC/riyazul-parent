@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:riyazul_parent/shared/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/rxdart.dart' as rx;
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ParentAuthController extends GetxController {
   var isLoading = false.obs;
@@ -70,6 +72,35 @@ class ParentAuthController extends GetxController {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyGrNo);
     await prefs.remove(_keyDobStr);
+  }
+
+  // ── Get Unique Device ID ──────────────────────────────────────────────────
+  Future<String> _getDeviceId() async {
+    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+        if (androidInfo.id.isNotEmpty) return androidInfo.id;
+      } else if (Platform.isIOS) {
+        final IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+        if (iosInfo.identifierForVendor != null &&
+            iosInfo.identifierForVendor!.isNotEmpty) {
+          return iosInfo.identifierForVendor!;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting device ID: $e');
+    }
+
+    // Fallback ID if cannot get hardware info
+    final prefs = await SharedPreferences.getInstance();
+    const fallbackKey = 'fallback_device_uuid';
+    String? fallbackId = prefs.getString(fallbackKey);
+    if (fallbackId == null) {
+      fallbackId = DateTime.now().millisecondsSinceEpoch.toString();
+      await prefs.setString(fallbackKey, fallbackId);
+    }
+    return fallbackId;
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -163,6 +194,45 @@ class ParentAuthController extends GetxController {
       }
 
       if (studentFound) {
+        final String currentDeviceId = await _getDeviceId();
+
+        // ── Device Logic Implementation ──
+        if (currentStudent!.loginDeviceId == null ||
+            currentStudent!.loginDeviceId!.isEmpty) {
+          // First time logging in (or admin cleared device)
+          await FBFireStore.students.doc(currentStudent!.docId).update({
+            'isInstalledAppUser': true,
+            'loginDeviceId': currentDeviceId,
+            'lastLoginDatetime': FieldValue.serverTimestamp(),
+          });
+          currentStudent = currentStudent!.copyWith(
+            isInstalledAppUser: true,
+            loginDeviceId: currentDeviceId,
+            lastLoginDatetime: DateTime.now(),
+          );
+        } else if (currentStudent!.loginDeviceId == currentDeviceId) {
+          // Same device, update last login only
+          await FBFireStore.students.doc(currentStudent!.docId).update({
+            'lastLoginDatetime': FieldValue.serverTimestamp(),
+          });
+          currentStudent = currentStudent!.copyWith(
+            lastLoginDatetime: DateTime.now(),
+          );
+        } else {
+          // Different device
+          if (!fromAutoLogin) {
+            Get.snackbar(
+              'Login Failed',
+              'You are already logged in from another device. Please contact administration.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.redAccent,
+              colorText: Colors.white,
+            );
+          }
+          isLoading.value = false;
+          return;
+        }
+
         await _saveCredentials(grNo, dob); // ← persist on success
 
         if (!fromAutoLogin) {

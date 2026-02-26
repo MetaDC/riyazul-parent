@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:riyazul_parent/models/notice_model.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'dart:typed_data';
 import 'package:riyazul_parent/controllers/notice_controller.dart';
 
 class PDFViewerScreen extends StatelessWidget {
@@ -32,10 +33,14 @@ class PDFViewerScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: FutureBuilder<List<int>>(
+      body: FutureBuilder<Uint8List>(
         future: argument is NoticeModel
-            ? controller.generatePDF(argument).then((value) => value.toList())
-            : Future.value(argument as List<int>),
+            ? controller.generatePDF(argument)
+            : Future.value(
+                argument is Uint8List
+                    ? argument
+                    : Uint8List.fromList(argument as List<int>),
+              ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -43,11 +48,11 @@ class PDFViewerScreen extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData || snapshot.data == null) {
             return const Center(child: Text('No PDF data found.'));
           }
 
-          return SfPdfViewer.memory(snapshot.data as dynamic);
+          return SfPdfViewer.memory(snapshot.data!);
         },
       ),
     );

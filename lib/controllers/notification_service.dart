@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
@@ -29,7 +30,12 @@ class NotificationService extends GetxService {
       settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
         if (details.payload != null) {
-          _handleMessage(details.payload!);
+          try {
+            final data = jsonDecode(details.payload!) as Map<String, dynamic>;
+            _handleMessageData(data);
+          } catch (e) {
+            _handleMessageData({'noticeId': details.payload});
+          }
         }
       },
     );
@@ -59,15 +65,15 @@ class NotificationService extends GetxService {
 
     // App opened from notification
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (message.data['noticeId'] != null) {
-        _handleMessage(message.data['noticeId']);
+      if (message.data.isNotEmpty) {
+        _handleMessageData(message.data);
       }
     });
 
     // Check if app was opened from terminated state
     RemoteMessage? initialMessage = await _fcm.getInitialMessage();
-    if (initialMessage != null && initialMessage.data['noticeId'] != null) {
-      _handleMessage(initialMessage.data['noticeId']);
+    if (initialMessage != null && initialMessage.data.isNotEmpty) {
+      _handleMessageData(initialMessage.data);
     }
   }
 
@@ -85,13 +91,25 @@ class NotificationService extends GetxService {
           priority: Priority.high,
         ),
       ),
-      payload: message.data['noticeId'],
+      payload: jsonEncode(message.data),
     );
   }
 
-  void _handleMessage(String noticeId) {
-    // Navigate to notice detail
-    Get.toNamed(AppRoutes.noticeDetail, arguments: noticeId);
+  void _handleMessageData(Map<String, dynamic> data) {
+    final type = data['type'];
+    if (type == 'fee') {
+      Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 2});
+    } else if (type == 'result') {
+      Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 1});
+    } else {
+      final noticeId = data['noticeId'];
+      if (noticeId != null) {
+        Get.toNamed(AppRoutes.noticeDetail, arguments: noticeId);
+      } else {
+        // Fallback to notice list / dashboard activity tab
+        Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 3});
+      }
+    }
   }
 
   Future<String?> getToken() async {

@@ -55,6 +55,7 @@ dependencies:
   printing: ^5.14.2
   rxdart: ^0.28.0
   open_filex: ^4.7.0
+  device_info_plus: ^12.3.0
 
 dev_dependencies:
   flutter_test:

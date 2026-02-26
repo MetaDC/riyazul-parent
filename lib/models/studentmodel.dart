@@ -33,6 +33,9 @@ class Studentmodel {
   final String feeType;
   final bool isActive;
   final DateTime? deactivatedAt;
+  final bool isInstalledAppUser;
+  final DateTime? lastLoginDatetime;
+  final String? loginDeviceId;
 
   Studentmodel({
     required this.docId,
@@ -57,6 +60,9 @@ class Studentmodel {
     required this.feeType,
     required this.isActive,
     this.deactivatedAt,
+    this.isInstalledAppUser = false,
+    this.lastLoginDatetime,
+    this.loginDeviceId,
   });
   Map<String, dynamic> toMap() {
     return {
@@ -84,6 +90,11 @@ class Studentmodel {
       'deactivatedAt': deactivatedAt != null
           ? Timestamp.fromDate(deactivatedAt!)
           : null,
+      'isInstalledAppUser': isInstalledAppUser,
+      'lastLoginDatetime': lastLoginDatetime != null
+          ? Timestamp.fromDate(lastLoginDatetime!)
+          : null,
+      'loginDeviceId': loginDeviceId,
     };
   }
 
@@ -113,6 +124,11 @@ class Studentmodel {
       deactivatedAt: json['deactivatedAt'] != null
           ? (json['deactivatedAt'] as Timestamp).toDate()
           : null,
+      isInstalledAppUser: json['isInstalledAppUser'] ?? false,
+      lastLoginDatetime: json['lastLoginDatetime'] != null
+          ? (json['lastLoginDatetime'] as Timestamp).toDate()
+          : null,
+      loginDeviceId: json['loginDeviceId'],
     );
   }
 
@@ -147,10 +163,21 @@ class Studentmodel {
       deactivatedAt: data['deactivatedAt'] != null
           ? (data['deactivatedAt'] as Timestamp).toDate()
           : null,
+      isInstalledAppUser: data['isInstalledAppUser'] ?? false,
+      lastLoginDatetime: data['lastLoginDatetime'] != null
+          ? (data['lastLoginDatetime'] as Timestamp).toDate()
+          : null,
+      loginDeviceId: data['loginDeviceId'],
     );
   }
 
-  Studentmodel copyWith({bool? isActive, DateTime? deactivatedAt}) {
+  Studentmodel copyWith({
+    bool? isActive,
+    DateTime? deactivatedAt,
+    bool? isInstalledAppUser,
+    DateTime? lastLoginDatetime,
+    String? loginDeviceId,
+  }) {
     return Studentmodel(
       docId: docId,
       grNO: grNO,
@@ -173,6 +200,9 @@ class Studentmodel {
       feeType: feeType,
       isActive: isActive ?? this.isActive,
       deactivatedAt: deactivatedAt,
+      isInstalledAppUser: isInstalledAppUser ?? this.isInstalledAppUser,
+      lastLoginDatetime: lastLoginDatetime ?? this.lastLoginDatetime,
+      loginDeviceId: loginDeviceId ?? this.loginDeviceId,
     );
   }
 }

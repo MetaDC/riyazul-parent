@@ -11,7 +11,8 @@ import 'package:riyazul_parent/models/notice_model.dart';
 import 'package:riyazul_parent/models/feeTransactionmodel.dart';
 import 'package:riyazul_parent/shared/firebase.dart';
 import 'package:flutter/services.dart';
-import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:riyazul_parent/shared/method.dart';
 import 'package:rxdart/rxdart.dart' as rx;
 
@@ -90,13 +91,44 @@ class NoticeController extends GetxController {
       }
 
       final pdfBytes = await generatePDF(notice);
-      final fileName = 'Notice_${notice.docId}.pdf';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'Notice_${notice.docId}_$timestamp.pdf';
 
-      await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+      await _saveAndOpenPDF(pdfBytes, fileName);
+
       isLoading.value = false;
     } catch (e) {
       isLoading.value = false;
       Get.snackbar('Error', 'Failed to download PDF: $e');
+    }
+  }
+
+  Future<void> _saveAndOpenPDF(Uint8List pdfBytes, String fileName) async {
+    try {
+      String dirPath;
+      if (Platform.isAndroid) {
+        dirPath = '/storage/emulated/0/Download';
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        dirPath = dir.path;
+      }
+
+      final file = File('$dirPath/$fileName');
+      await file.writeAsBytes(pdfBytes);
+
+      Get.snackbar(
+        'Success',
+        'Downloaded to Downloads folder',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      await OpenFilex.open(file.path);
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to save or open PDF: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -270,9 +302,11 @@ class NoticeController extends GetxController {
       if (Platform.isAndroid) await Permission.storage.request();
 
       final pdfBytes = await generateFeeReceiptPDF(feeTx);
-      final fileName = 'Receipt_${feeTx.receiptNo.replaceAll('/', '_')}.pdf';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName =
+          'Receipt_${feeTx.receiptNo.replaceAll('/', '_')}_$timestamp.pdf';
 
-      await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+      await _saveAndOpenPDF(pdfBytes, fileName);
       isLoading.value = false;
     } catch (e) {
       isLoading.value = false;
