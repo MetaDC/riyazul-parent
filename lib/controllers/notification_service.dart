@@ -78,10 +78,20 @@ class NotificationService extends GetxService {
   }
 
   void _showLocalNotification(RemoteMessage message) {
+    final title =
+        message.notification?.title ??
+        message.data['title'] ??
+        'School Notification';
+    final body =
+        message.notification?.body ??
+        message.data['body'] ??
+        message.data['message'] ??
+        '';
+
     _localNotifications.show(
       id: message.hashCode,
-      title: message.notification?.title,
-      body: message.notification?.body,
+      title: title,
+      body: body,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           channelId,
@@ -101,6 +111,8 @@ class NotificationService extends GetxService {
       Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 2});
     } else if (type == 'result') {
       Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 1});
+    } else if (type == 'sabak' || type == 'complaint') {
+      Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 0});
     } else {
       final noticeId = data['noticeId'];
       if (noticeId != null) {

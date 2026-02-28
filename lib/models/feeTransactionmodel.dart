@@ -53,7 +53,7 @@ class Feetransactionmodel {
   factory Feetransactionmodel.fromJson(Map<String, dynamic> json) {
     return Feetransactionmodel(
       docId: json['docId'] ?? '',
-      studId: json['studId'] ?? '',
+      studId: json['studId'] ?? json['studentId'] ?? '',
       startDate: DateTime.parse(json['startDate']),
       endDate: DateTime.parse(json['endDate']),
       totalAmt: json['totalAmt'] ?? '',
@@ -73,7 +73,7 @@ class Feetransactionmodel {
 
     return Feetransactionmodel(
       docId: snapshot.id,
-      studId: data['studId'] ?? '',
+      studId: data['studId'] ?? data['studentId'] ?? '',
       startDate: data['startDate'] is Timestamp
           ? (data['startDate'] as Timestamp).toDate()
           : DateTime.now(),

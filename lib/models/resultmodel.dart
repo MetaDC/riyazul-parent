@@ -39,7 +39,7 @@ class Resultmodel {
     return Resultmodel(
       docId: docId,
       title: json['title'] ?? '',
-      studentId: json['studentId'] ?? '',
+      studentId: json['studentId'] ?? json['studId'] ?? '',
       courseType: json['courseType'] ?? '',
       classId: json['classId'] ?? '',
       className: json['className'] ?? '',
@@ -47,11 +47,11 @@ class Resultmodel {
       totalMarks: json['totalMarks'] ?? '',
       presentDays: json['presentDays'] ?? '',
       academicYear: json['academicYear'] ?? '',
-      resultDate: (json['resultDate'] as Timestamp).toDate(),
-      subjects:
-          (json['subjects'] as List)
-              .map((e) => SubjectResultModel.fromMap(e))
-              .toList(),
+      resultDate:
+          (json['resultDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      subjects: (json['subjects'] as List? ?? [])
+          .map((e) => SubjectResultModel.fromMap(e))
+          .toList(),
     );
   }
 }

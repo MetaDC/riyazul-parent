@@ -346,13 +346,12 @@ class DashboardScreen extends StatelessWidget {
                       DefaultTabController.of(context).animateTo(2);
                     } else if (notif.type == 'result') {
                       DefaultTabController.of(context).animateTo(1);
+                    } else if (notif.type == 'sabak' ||
+                        notif.type == 'complaint') {
+                      DefaultTabController.of(context).animateTo(0);
                     } else {
                       // It's a notice or some general broadcast
                       Get.toNamed(AppRoutes.noticeList);
-                      // Get.toNamed(
-                      //   AppRoutes.noticeDetail,
-                      //   arguments: notif.docId,
-                      // );
                     }
                   },
                   child: Container(
@@ -423,7 +422,9 @@ class DashboardScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  notif.title,
+                                  notif.body.isNotEmpty
+                                      ? notif.body
+                                      : notif.title,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,
@@ -459,6 +460,10 @@ class DashboardScreen extends StatelessWidget {
         return Icons.grading_outlined;
       case 'fee':
         return Icons.receipt_rounded;
+      case 'sabak':
+        return Icons.menu_book_outlined;
+      case 'complaint':
+        return Icons.warning_amber_rounded;
       default:
         return Icons.notifications_outlined;
     }
@@ -470,6 +475,10 @@ class DashboardScreen extends StatelessWidget {
         return kNavy.withOpacity(0.08);
       case 'fee':
         return const Color(0xffE8F5E9);
+      case 'sabak':
+        return Colors.blue.shade50;
+      case 'complaint':
+        return Colors.red.shade50;
       default:
         return kCream.withOpacity(0.6);
     }
@@ -481,6 +490,10 @@ class DashboardScreen extends StatelessWidget {
         return kNavy;
       case 'fee':
         return const Color(0xff2E7D32);
+      case 'sabak':
+        return Colors.blue.shade800;
+      case 'complaint':
+        return Colors.red.shade800;
       default:
         return kNavyLight;
     }
@@ -612,6 +625,24 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 20),
+
+          // Attendance Card
+          _buildSectionHeader('Attendance'),
+          const SizedBox(height: 12),
+          _buildAttendanceCard(Get.find<ParentAuthController>()),
+          const SizedBox(height: 20),
+
+          // Sabak Section
+          _buildSectionHeader('Recent Sabak'),
+          const SizedBox(height: 12),
+          _buildSabakSection(Get.find<ParentAuthController>()),
+          const SizedBox(height: 20),
+
+          // Complaints Section
+          _buildSectionHeader('Complaints'),
+          const SizedBox(height: 12),
+          _buildComplaintsSection(Get.find<ParentAuthController>()),
           const SizedBox(height: 20),
         ],
       ),
@@ -1410,5 +1441,354 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ── NEW SECTIONS FOR PROFILE TAB ──────────────────────────────────────────
+
+  Widget _buildAttendanceCard(ParentAuthController controller) {
+    return Obx(() {
+      final present = controller.presentAttendanceCount.value;
+      final absent = controller.absentAttendanceCount.value;
+      final totalRecorded = present + absent;
+
+      double presentPercentage = 0;
+      if (totalRecorded > 0) {
+        presentPercentage = present / totalRecorded;
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: kNavy.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 70,
+              height: 70,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: presentPercentage,
+                    strokeWidth: 8,
+                    backgroundColor: Colors.red.shade100,
+                    color: Colors.green,
+                    strokeCap: StrokeCap.round,
+                  ),
+                  Center(
+                    child: Text(
+                      '${(presentPercentage * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: kNavy,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAttendanceStatRow(
+                    'Present Days',
+                    present.toString(),
+                    Colors.green,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildAttendanceStatRow(
+                    'Absent Days',
+                    absent.toString(),
+                    Colors.red,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildAttendanceStatRow(
+                    'Total Recorded',
+                    totalRecorded.toString(),
+                    kNavy,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildAttendanceStatRow(String label, String value, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSabakSection(ParentAuthController controller) {
+    return Obx(() {
+      if (controller.sabakList.isEmpty) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 30),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.menu_book_outlined,
+                size: 40,
+                color: Colors.grey.shade300,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No Sabak records found.',
+                style: TextStyle(color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: controller.sabakList.length > 5
+            ? 5
+            : controller.sabakList.length, // Show top 5
+        itemBuilder: (context, index) {
+          final sabak = controller.sabakList[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: kNavy.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: kNavy.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.book_outlined, color: kNavy),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Para No: ${sabak.paraNo}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: kNavy,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('dd MMM').format(sabak.createdAt),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        sabak.sabakText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildComplaintsSection(ParentAuthController controller) {
+    return Obx(() {
+      if (controller.complaintsList.isEmpty) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.green.shade600),
+              const SizedBox(width: 8),
+              Text(
+                'No complaints. Excellent!',
+                style: TextStyle(
+                  color: Colors.green.shade800,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: controller.complaintsList.length,
+        itemBuilder: (context, index) {
+          final complaint = controller.complaintsList[index];
+          final isPending = complaint.status.toLowerCase() == 'pending';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isPending ? Colors.red.shade50 : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isPending ? Colors.red.shade200 : Colors.grey.shade200,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: isPending
+                          ? Colors.red.shade600
+                          : Colors.grey.shade500,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        complaint.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isPending ? Colors.red.shade900 : kNavy,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isPending
+                            ? Colors.red.shade600
+                            : Colors.green.shade600,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        complaint.status,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 32,
+                  ), // Align with text above
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        complaint.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Reported on: ${DateFormat('dd MMM yyyy').format(complaint.createdAt)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
   }
 }

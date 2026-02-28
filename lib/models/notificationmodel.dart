@@ -4,7 +4,7 @@ class NotificationModel {
   final String docId;
   final String title;
   final String body;
-  final String type; // 'fee' | 'result' | 'notice'
+  final String type; // 'fee' | 'result' | 'notice' | 'sabak' | 'complaint'
   final String targetType; // 'all' | 'specific'
   final String?
   studentId; // null = all students, filled = specific student only
@@ -73,7 +73,7 @@ class NotificationModel {
       body: data['body'] ?? data['message'] ?? '',
       type: data['type'] ?? 'notice',
       targetType: targetType,
-      studentId: data['studentId'], // can be null
+      studentId: data['studentId'] ?? data['studId'], // can be null
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isRead: isRead,
       readBy: readByList,

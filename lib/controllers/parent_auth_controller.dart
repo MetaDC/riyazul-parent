@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:riyazul_parent/models/notificationmodel.dart';
@@ -5,6 +7,8 @@ import 'package:riyazul_parent/models/studentmodel.dart';
 import 'package:riyazul_parent/models/feeTransactionmodel.dart';
 import 'package:riyazul_parent/models/resultmodel.dart';
 import 'package:riyazul_parent/models/classmodel.dart';
+import 'package:riyazul_parent/models/sabakmodel.dart';
+import 'package:riyazul_parent/models/complaintmodel.dart';
 import 'package:riyazul_parent/shared/firebase.dart';
 import 'package:flutter/material.dart';
 
@@ -23,6 +27,11 @@ class ParentAuthController extends GetxController {
   final RxList<NotificationModel> notifications = <NotificationModel>[].obs;
   final RxInt unreadCount = 0.obs;
 
+  var sabakList = <Sabakmodel>[].obs;
+  var complaintsList = <Complaintmodel>[].obs;
+  var presentAttendanceCount = 0.obs;
+  var absentAttendanceCount = 0.obs;
+  StreamSubscription? _notificationSubscription;
   var schoolClassName = ''.obs;
   var deeniyatClassName = ''.obs;
   var totalDays = '';
@@ -112,13 +121,6 @@ class ParentAuthController extends GetxController {
     try {
       isLoading.value = true;
 
-      // --- Robust Login Query Strategy ---
-      // Try multiple variations to find the student:
-      // 1. grNO as String
-      // 2. grNO as Number (if numeric)
-      // 3. grNo as String
-      // 4. grNo as Number (if numeric)
-
       List<QueryDocumentSnapshot<Map<String, dynamic>>> studentDocs = [];
 
       // Variation 1: grNO (String)
@@ -166,16 +168,13 @@ class ParentAuthController extends GetxController {
       bool studentFound = false;
       for (var doc in studentDocs) {
         final student = Studentmodel.fromSnapshot(doc);
-        // student.dob is already UTC midnight (from _dobFromTimestamp)
         final studentDob = DateTime.utc(
           student.dob.year,
           student.dob.month,
           student.dob.day,
         );
-        // Normalize input to UTC midnight as well
         final inputDob = DateTime.utc(dob.year, dob.month, dob.day);
 
-        // Debug print to help identify mismatch if it still fails
         debugPrint(
           'Comparing DOB: Input=$inputDob, Student($grNo)=${student.dob} (Normalized to $studentDob)',
         );
@@ -196,44 +195,13 @@ class ParentAuthController extends GetxController {
       if (studentFound) {
         final String currentDeviceId = await _getDeviceId();
 
-        // ── Device Logic Implementation ──
-        if (currentStudent!.loginDeviceId == null ||
-            currentStudent!.loginDeviceId!.isEmpty) {
-          // First time logging in (or admin cleared device)
-          await FBFireStore.students.doc(currentStudent!.docId).update({
-            'isInstalledAppUser': true,
-            'loginDeviceId': currentDeviceId,
-            'lastLoginDatetime': FieldValue.serverTimestamp(),
-          });
-          currentStudent = currentStudent!.copyWith(
-            isInstalledAppUser: true,
-            loginDeviceId: currentDeviceId,
-            lastLoginDatetime: DateTime.now(),
-          );
-        } else if (currentStudent!.loginDeviceId == currentDeviceId) {
-          // Same device, update last login only
-          await FBFireStore.students.doc(currentStudent!.docId).update({
-            'lastLoginDatetime': FieldValue.serverTimestamp(),
-          });
-          currentStudent = currentStudent!.copyWith(
-            lastLoginDatetime: DateTime.now(),
-          );
-        } else {
-          // Different device
-          if (!fromAutoLogin) {
-            Get.snackbar(
-              'Login Failed',
-              'You are already logged in from another device. Please contact administration.',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.redAccent,
-              colorText: Colors.white,
-            );
-          }
-          isLoading.value = false;
-          return;
-        }
+        await FBFireStore.students.doc(currentStudent!.docId).update({
+          'isInstalledAppUser': true,
+          'loginDeviceIds': FieldValue.arrayUnion([currentDeviceId]),
+          'lastLoginDatetime': FieldValue.serverTimestamp(),
+        });
 
-        await _saveCredentials(grNo, dob); // ← persist on success
+        await _saveCredentials(grNo, dob);
 
         if (!fromAutoLogin) {
           Get.snackbar(
@@ -313,115 +281,211 @@ class ParentAuthController extends GetxController {
   }
 
   Future<void> _performLogout() async {
-    await _clearCredentials(); // ← wipe saved creds
+    await _clearCredentials();
     currentStudent = null;
     studentResults.clear();
     studentFees.clear();
+    sabakList.clear();
+    complaintsList.clear();
+    presentAttendanceCount.value = 0;
+    absentAttendanceCount.value = 0;
     schoolClassName.value = '';
     deeniyatClassName.value = '';
     totalDays = '';
+    _notificationSubscription?.cancel();
+    _notificationSubscription = null;
     Get.offAllNamed(AppRoutes.login);
   }
 
   Future<void> fetchStudentData() async {
     if (currentStudent == null) return;
+    final String sId = currentStudent!.docId;
+
     try {
-      // Fetch Results specific to student
-      final resultSnap = await FBFireStore.results
-          .where('studentId', isEqualTo: currentStudent!.docId)
-          .get();
-      studentResults.value = resultSnap.docs
+      final List<Future<QuerySnapshot<Map<String, dynamic>>>> resFutures = [
+        FBFireStore.results.where('studentId', isEqualTo: sId).get(),
+        FBFireStore.results.where('studId', isEqualTo: sId).get(),
+        FBFireStore.results
+            .where('studentId', isEqualTo: currentStudent!.grNO)
+            .get(),
+        FBFireStore.results
+            .where('studId', isEqualTo: currentStudent!.grNO)
+            .get(),
+      ];
+
+      // Numeric fallbacks for Results
+      if (RegExp(r'^\d+$').hasMatch(currentStudent!.grNO)) {
+        final grInt = int.parse(currentStudent!.grNO);
+        resFutures.add(
+          FBFireStore.results.where('studentId', isEqualTo: grInt).get(),
+        );
+        resFutures.add(
+          FBFireStore.results.where('studId', isEqualTo: grInt).get(),
+        );
+      }
+
+      final resSnaps = await Future.wait(resFutures);
+
+      final allResDocs = resSnaps.expand((s) => s.docs).toList();
+      final seenResIds = <String>{};
+      studentResults.value = allResDocs
+          .where((doc) => seenResIds.add(doc.id))
           .map((e) => Resultmodel.fromSnapshot(e))
           .toList();
 
-      // Fetch Fees specific to student
-      final feeSnap = await FBFireStore.feetranscationdetails
-          .where('studId', isEqualTo: currentStudent!.docId)
-          .orderBy('receivedDate', descending: true)
-          .get();
-      studentFees.value = feeSnap.docs
-          .map((e) => Feetransactionmodel.fromSnapshot(e))
-          .toList();
+      // 2. Fetch Fees (Check both labels)
+      final feeResults = await Future.wait([
+        FBFireStore.feetranscationdetails.where('studId', isEqualTo: sId).get(),
+        FBFireStore.feetranscationdetails
+            .where('studentId', isEqualTo: sId)
+            .get(),
+      ]);
+      final allFeeDocs = [...feeResults[0].docs, ...feeResults[1].docs];
+      final seenFeeIds = <String>{};
+      studentFees.value =
+          allFeeDocs
+              .where((doc) => seenFeeIds.add(doc.id))
+              .map((e) => Feetransactionmodel.fromSnapshot(e))
+              .toList()
+            ..sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
 
-      // Fetch School Class Name
-      if (currentStudent!.currentSchoolStd != null &&
-          currentStudent!.currentSchoolStd!.isNotEmpty) {
-        final doc = await FBFireStore.classes
-            .doc(currentStudent!.currentSchoolStd)
-            .get();
-        if (doc.exists) {
-          schoolClassName.value = ClassModel.fromSnapshot(doc).className;
-        }
-      }
+      // 3. Fetch Classes & Settings individually to avoid Future.wait type conflicts
+      // ✅ FIX: Typed as DocumentSnapshot<Map<String,dynamic>> to match ClassModel.fromSnapshot
+      final DocumentSnapshot<Map<String, dynamic>>? schoolDoc =
+          (currentStudent!.currentSchoolStd?.isNotEmpty ?? false)
+          ? await FBFireStore.classes
+                .doc(currentStudent!.currentSchoolStd)
+                .get()
+          : null;
 
-      // Fetch Deeniyat Class Name
-      if (currentStudent!.currentDeeniyat.isNotEmpty) {
-        final doc = await FBFireStore.classes
-            .doc(currentStudent!.currentDeeniyat)
-            .get();
-        if (doc.exists) {
-          deeniyatClassName.value = ClassModel.fromSnapshot(doc).className;
-        }
-      }
+      final DocumentSnapshot<Map<String, dynamic>>? deeniyatDoc =
+          currentStudent!.currentDeeniyat.isNotEmpty
+          ? await FBFireStore.classes.doc(currentStudent!.currentDeeniyat).get()
+          : null;
 
-      // Fetch Total Days (School Settings)
       final totalDaysDoc = await FBFireStore.totalDays.get();
-      if (totalDaysDoc.exists) {
-        final data = totalDaysDoc.data();
-        if (data != null && data['days'] != null) {
-          totalDays = data['days'].toString();
-        }
+
+      if (schoolDoc != null && schoolDoc.exists)
+        schoolClassName.value = ClassModel.fromSnapshot(schoolDoc).className;
+
+      if (deeniyatDoc != null && deeniyatDoc.exists)
+        deeniyatClassName.value = ClassModel.fromSnapshot(
+          deeniyatDoc,
+        ).className;
+
+      if (totalDaysDoc.exists)
+        totalDays = totalDaysDoc.data()?['days']?.toString() ?? '';
+      // 4. Sabak (CLEAN FIXED VERSION)
+
+      final sabSnap = await FBFireStore.sabaks
+          .where('studentId', isEqualTo: currentStudent!.docId)
+          .get();
+
+      print("Sabak Query StudentId: ${currentStudent!.docId}");
+      print("Sabak Docs Found: ${sabSnap.docs.length}");
+
+      sabakList.value =
+          sabSnap.docs.map((e) => Sabakmodel.fromSnapshot(e)).toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      // 5. Complaints (Robust Strategy)
+      final List<Future<QuerySnapshot<Map<String, dynamic>>>> cmpFutures = [
+        FBFireStore.complaints.where('studentId', isEqualTo: sId).get(),
+        FBFireStore.complaints.where('studId', isEqualTo: sId).get(),
+        FBFireStore.complaints
+            .where('studentId', isEqualTo: currentStudent!.grNO)
+            .get(),
+        FBFireStore.complaints
+            .where('studId', isEqualTo: currentStudent!.grNO)
+            .get(),
+      ];
+
+      // Numeric fallbacks for Complaints
+      if (RegExp(r'^\d+$').hasMatch(currentStudent!.grNO)) {
+        final grInt = int.parse(currentStudent!.grNO);
+        cmpFutures.add(
+          FBFireStore.complaints.where('studentId', isEqualTo: grInt).get(),
+        );
+        cmpFutures.add(
+          FBFireStore.complaints.where('studId', isEqualTo: grInt).get(),
+        );
       }
 
-      // Start listening for notifications
-      fetchNotifications(currentStudent!.docId);
+      final cmpSnaps = await Future.wait(cmpFutures);
+
+      final allCmpDocs = cmpSnaps.expand((s) => s.docs).toList();
+      final seenCmpIds = <String>{};
+      complaintsList.value =
+          allCmpDocs
+              .where((doc) => seenCmpIds.add(doc.id))
+              .map((e) => Complaintmodel.fromSnapshot(e))
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      // 6. Attendance
+      final attResults = await Future.wait([
+        FBFireStore.attendance.where('presentStudId', arrayContains: sId).get(),
+        FBFireStore.attendance.where('absentStudId', arrayContains: sId).get(),
+      ]);
+      presentAttendanceCount.value = attResults[0].docs.length;
+      absentAttendanceCount.value = attResults[1].docs.length;
+
+      fetchNotifications(sId);
     } catch (e) {
       debugPrint('Error fetching student data: $e');
     }
   }
 
-  // Call this after student login is confirmed
+  // ── Notifications (real-time, leak-safe) ─────────────────────────────────
   void fetchNotifications(String studentId) {
-    final specificStream = FirebaseFirestore.instance
+    _notificationSubscription?.cancel();
+
+    final s1 = FirebaseFirestore.instance
         .collection('notifications')
         .where('studentId', isEqualTo: studentId)
         .snapshots();
-
-    final globalStream = FirebaseFirestore.instance
+    final s2 = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('studId', isEqualTo: studentId)
+        .snapshots();
+    final s3 = FirebaseFirestore.instance
         .collection('notifications')
         .where('targetType', isEqualTo: 'all')
         .snapshots();
 
-    rx.Rx.combineLatest2(specificStream, globalStream, (
-      QuerySnapshot specific,
-      QuerySnapshot global,
-    ) {
-      final List<NotificationModel> combined = [];
-      final Set<String> ids = {};
-
-      void addUnique(QuerySnapshot snap) {
-        for (var doc in snap.docs) {
-          if (!ids.contains(doc.id)) {
-            combined.add(
-              NotificationModel.fromSnapshot(doc, currentStudentId: studentId),
-            );
-            ids.add(doc.id);
+    _notificationSubscription =
+        rx.Rx.combineLatest3(s1, s2, s3, (
+          QuerySnapshot q1,
+          QuerySnapshot q2,
+          QuerySnapshot q3,
+        ) {
+          final List<NotificationModel> combined = [];
+          final Set<String> ids = {};
+          void add(QuerySnapshot s) {
+            for (var d in s.docs) {
+              if (ids.add(d.id)) {
+                combined.add(
+                  NotificationModel.fromSnapshot(
+                    d,
+                    currentStudentId: studentId,
+                  ),
+                );
+              }
+            }
           }
-        }
-      }
 
-      addUnique(specific);
-      addUnique(global);
-
-      combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return combined;
-    }).listen((updatedList) {
-      notifications.value = updatedList;
-      unreadCount.value = updatedList.where((n) => !n.isRead).length;
-    });
+          add(q1);
+          add(q2);
+          add(q3);
+          combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return combined;
+        }).listen((list) {
+          notifications.value = list;
+          unreadCount.value = list.where((n) => !n.isRead).length;
+        });
   }
 
-  // Mark a single notification as read
+  // ── Mark a single notification as read ───────────────────────────────────
   Future<void> markAsRead(String notificationId) async {
     final notif = notifications.firstWhereOrNull(
       (n) => n.docId == notificationId,
@@ -443,11 +507,11 @@ class ParentAuthController extends GetxController {
     }
   }
 
-  // Mark all as read
+  // ── Mark all as read ──────────────────────────────────────────────────────
   Future<void> markAllAsRead(String studentId) async {
     final batch = FirebaseFirestore.instance.batch();
 
-    // For specific
+    // Specific notifications
     final unreadSpecific = await FirebaseFirestore.instance
         .collection('notifications')
         .where('studentId', isEqualTo: studentId)
@@ -457,7 +521,7 @@ class ParentAuthController extends GetxController {
       batch.update(doc.reference, {'isRead': true});
     }
 
-    // For global
+    // Global notifications
     final unreadGlobal = notifications.where(
       (n) => n.targetType == 'all' && !n.isRead,
     );

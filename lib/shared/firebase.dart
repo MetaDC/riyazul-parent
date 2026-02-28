@@ -23,6 +23,8 @@ class FBFireStore {
   static final studentNotes = fb.collection('studentNotes');
   static final notices = fb.collection('notices');
   static final notifications = fb.collection('notifications');
+  static final complaints = fb.collection('complaints');
+  static final sabaks = fb.collection('sabak');
 }
 
 class FBStorage {

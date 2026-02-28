@@ -43,13 +43,15 @@ class AttendanceModel {
       // stuId: map['stuId'],
       classId: map['classId'],
       subjectId: map['subjectId'],
-      dateTime: (map['dateTime'] as Timestamp).toDate(),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      dateTime: (map['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       // isPresent: map['isPresent'] ?? false,
-      presentStudId:
-          (map['presentStudId'] as List?)?.map((e) => e.toString()).toList(),
-      absentStudId:
-          (map['absentStudId'] as List?)?.map((e) => e.toString()).toList(),
+      presentStudId: (map['presentStudId'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
+      absentStudId: (map['absentStudId'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
     );
   }
 

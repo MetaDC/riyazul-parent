@@ -35,7 +35,7 @@ class Studentmodel {
   final DateTime? deactivatedAt;
   final bool isInstalledAppUser;
   final DateTime? lastLoginDatetime;
-  final String? loginDeviceId;
+  List<String>? loginDeviceIds;
 
   Studentmodel({
     required this.docId,
@@ -62,7 +62,7 @@ class Studentmodel {
     this.deactivatedAt,
     this.isInstalledAppUser = false,
     this.lastLoginDatetime,
-    this.loginDeviceId,
+    this.loginDeviceIds,
   });
   Map<String, dynamic> toMap() {
     return {
@@ -94,7 +94,7 @@ class Studentmodel {
       'lastLoginDatetime': lastLoginDatetime != null
           ? Timestamp.fromDate(lastLoginDatetime!)
           : null,
-      'loginDeviceId': loginDeviceId,
+      'loginDeviceIds': loginDeviceIds,
     };
   }
 
@@ -128,7 +128,9 @@ class Studentmodel {
       lastLoginDatetime: json['lastLoginDatetime'] != null
           ? (json['lastLoginDatetime'] as Timestamp).toDate()
           : null,
-      loginDeviceId: json['loginDeviceId'],
+      loginDeviceIds: json['loginDeviceIds'] != null
+          ? List<String>.from(json['loginDeviceIds'])
+          : null,
     );
   }
 
@@ -167,7 +169,9 @@ class Studentmodel {
       lastLoginDatetime: data['lastLoginDatetime'] != null
           ? (data['lastLoginDatetime'] as Timestamp).toDate()
           : null,
-      loginDeviceId: data['loginDeviceId'],
+      loginDeviceIds: data['loginDeviceIds'] != null
+          ? List<String>.from(data['loginDeviceIds'])
+          : null,
     );
   }
 
@@ -202,7 +206,7 @@ class Studentmodel {
       deactivatedAt: deactivatedAt,
       isInstalledAppUser: isInstalledAppUser ?? this.isInstalledAppUser,
       lastLoginDatetime: lastLoginDatetime ?? this.lastLoginDatetime,
-      loginDeviceId: loginDeviceId ?? this.loginDeviceId,
+      loginDeviceIds: loginDeviceIds ?? this.loginDeviceIds,
     );
   }
 }
