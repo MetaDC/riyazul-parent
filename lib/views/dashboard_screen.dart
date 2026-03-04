@@ -66,7 +66,7 @@ class DashboardScreen extends StatelessWidget {
 
     return DefaultTabController(
       initialIndex: initialTabIndex,
-      length: 4, // ✅ 4 tabs
+      length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xffF4F6FB),
 
@@ -125,36 +125,9 @@ class DashboardScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: kCreamDark, width: 2),
                 ),
-                // child: const Icon(Icons.person, size: 22, color: kNavy),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Text(
-                    //   "JAMIAH RIYAZUL ULOOM",
-                    //   // student.name,
-                    //   // maxLines: 1,
-                    //   overflow: TextOverflow.ellipsis,
-                    //   style: const TextStyle(
-                    //     color: kCream,
-                    //     fontSize: 18,
-                    //     fontWeight: FontWeight.bold,
-                    //     letterSpacing: 0.3,
-                    //   ),
-                    // ),
-                    // Text(
-                    //   'GR No: ${student.grNO}',
-                    //   style: TextStyle(
-                    //     color: kCream.withOpacity(0.7),
-                    //     fontSize: 11,
-                    //   ),
-                    // ),
-                  ],
-                ),
-              ),
+              const Expanded(child: SizedBox()),
             ],
           ),
           actions: [
@@ -193,13 +166,13 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
 
-        // ── Tab Content — 4 children matching 4 tabs ─────────────────────
+        // ── Tab Content ──────────────────────────────────────────────────
         body: TabBarView(
           children: [
             _buildProfileSection(student),
             _buildResultsSection(authController),
             _buildFeesSection(authController),
-            _buildActivitySection(authController), // ✅ fixed: was missing
+            _buildActivitySection(authController, student),
           ],
         ),
 
@@ -239,7 +212,6 @@ class DashboardScreen extends StatelessWidget {
                   fontWeight: FontWeight.w400,
                   fontSize: 12,
                 ),
-                // ✅ Fixed: removed const from tabs list so Obx works
                 tabs: [
                   const Tab(
                     icon: Icon(Icons.person_outline, size: 22),
@@ -256,7 +228,6 @@ class DashboardScreen extends StatelessWidget {
                     text: 'Fees',
                     iconMargin: EdgeInsets.only(bottom: 2),
                   ),
-                  // ✅ Fixed: Obx cannot be inside const — removed const
                   Tab(
                     iconMargin: const EdgeInsets.only(bottom: 2),
                     text: 'Activity',
@@ -300,8 +271,252 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // ── ACTIVITY SECTION ──────────────────────────────────────────────────────
-  Widget _buildActivitySection(ParentAuthController controller) {
+  // ══════════════════════════════════════════════════════════════════════════
+  // PROFILE SECTION — 2-button header: Student Info | Sabak (navigates away)
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildProfileSection(dynamic student) {
+    return Column(
+      children: [
+        // ── 2-Button Header ──────────────────────────────────────────────
+        Container(
+          color: const Color(0xffF4F6FB),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+          child: Row(
+            children: [
+              // ── Tab 1: Student Info (always active/selected style) ─────
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  decoration: BoxDecoration(
+                    color: kNavy,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kNavy.withOpacity(0.28),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.person_outline_rounded,
+                        size: 16,
+                        color: kCream,
+                      ),
+                      SizedBox(width: 7),
+                      Text(
+                        'Student Info',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: kCream,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // ── Tab 2: Sabak — tapping opens a new page ───────────────
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Get.toNamed(AppRoutes.sabakList),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.menu_book_outlined,
+                          size: 16,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          'Sabak',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 11,
+                          color: Colors.grey.shade400,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Scrollable Content: Info + Attendance + Complaints ───────────
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Student Information Card
+                _buildSectionHeader('Student Information'),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kNavy.withOpacity(0.07),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Banner
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [kNavy, kNavyLight],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: kCream,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: kCreamDark, width: 3),
+                              ),
+                              child: const Icon(
+                                Icons.person,
+                                size: 44,
+                                color: kNavy,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              student.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: kCream,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'GR No: ${student.grNO}',
+                              style: TextStyle(
+                                color: kCream.withOpacity(0.75),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Info rows
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: [
+                            Obx(
+                              () => _buildInfoRow(
+                                Icons.school_outlined,
+                                'Class / Std',
+                                Get.find<ParentAuthController>()
+                                        .schoolClassName
+                                        .value
+                                        .isNotEmpty
+                                    ? Get.find<ParentAuthController>()
+                                          .schoolClassName
+                                          .value
+                                    : 'N/A',
+                              ),
+                            ),
+                            Obx(
+                              () => _buildInfoRow(
+                                Icons.menu_book_outlined,
+                                'Deeniyat Class',
+                                Get.find<ParentAuthController>()
+                                        .deeniyatClassName
+                                        .value
+                                        .isNotEmpty
+                                    ? Get.find<ParentAuthController>()
+                                          .deeniyatClassName
+                                          .value
+                                    : 'N/A',
+                              ),
+                            ),
+                            _buildInfoRow(
+                              Icons.cake_outlined,
+                              'Date of Birth',
+                              DateFormat('dd MMM yyyy').format(student.dob),
+                            ),
+                            _buildInfoRow(
+                              Icons.phone_outlined,
+                              'Phone',
+                              student.phoneNumber,
+                              isLast: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Attendance
+                _buildSectionHeader('Attendance'),
+                const SizedBox(height: 12),
+                _buildAttendanceCard(Get.find<ParentAuthController>()),
+                const SizedBox(height: 28),
+
+                // Complaints
+                _buildSectionHeader('Complaints'),
+                const SizedBox(height: 12),
+                _buildComplaintsSection(Get.find<ParentAuthController>()),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ACTIVITY SECTION
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildActivitySection(
+    ParentAuthController controller,
+    dynamic student,
+  ) {
     return Obx(() {
       if (controller.notifications.isEmpty) {
         return _buildEmptyState(
@@ -317,9 +532,11 @@ class DashboardScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: () => controller.markAllAsRead(
-                    controller.currentStudent!.docId,
-                  ),
+                  onTap: () {
+                    if (student != null) {
+                      controller.markAllAsRead(student.docId);
+                    }
+                  },
                   child: Text(
                     'Mark all as read',
                     style: TextStyle(
@@ -341,16 +558,17 @@ class DashboardScreen extends StatelessWidget {
                 return GestureDetector(
                   onTap: () {
                     controller.markAsRead(notif.docId);
-
                     if (notif.type == 'fee') {
                       DefaultTabController.of(context).animateTo(2);
                     } else if (notif.type == 'result') {
                       DefaultTabController.of(context).animateTo(1);
-                    } else if (notif.type == 'sabak' ||
-                        notif.type == 'complaint') {
+                    } else if (notif.type == 'complaint') {
                       DefaultTabController.of(context).animateTo(0);
+                    } else if (notif.type == 'sabak') {
+                      Get.toNamed(AppRoutes.sabakList);
+                    } else if (notif.type == 'unpaid_fee') {
+                      DefaultTabController.of(context).animateTo(2);
                     } else {
-                      // It's a notice or some general broadcast
                       Get.toNamed(AppRoutes.noticeList);
                     }
                   },
@@ -508,146 +726,9 @@ class DashboardScreen extends StatelessWidget {
     return DateFormat('dd MMM yyyy').format(dt);
   }
 
-  Widget _buildProfileSection(dynamic student) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          _buildSectionHeader('Student Information'),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: kNavy.withOpacity(0.07),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [kNavy, kNavyLight],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: kCream,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: kCreamDark, width: 3),
-                        ),
-                        child: const Icon(Icons.person, size: 44, color: kNavy),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        student.name,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: kCream,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'GR No: ${student.grNO}',
-                        style: TextStyle(
-                          color: kCream.withOpacity(0.75),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      Obx(
-                        () => _buildInfoRow(
-                          Icons.school_outlined,
-                          'Class / Std',
-                          Get.find<ParentAuthController>()
-                                  .schoolClassName
-                                  .value
-                                  .isNotEmpty
-                              ? Get.find<ParentAuthController>()
-                                    .schoolClassName
-                                    .value
-                              : 'N/A',
-                        ),
-                      ),
-                      Obx(
-                        () => _buildInfoRow(
-                          Icons.menu_book_outlined,
-                          'Deeniyat Class',
-                          Get.find<ParentAuthController>()
-                                  .deeniyatClassName
-                                  .value
-                                  .isNotEmpty
-                              ? Get.find<ParentAuthController>()
-                                    .deeniyatClassName
-                                    .value
-                              : 'N/A',
-                        ),
-                      ),
-                      _buildInfoRow(
-                        Icons.cake_outlined,
-                        'Date of Birth',
-                        DateFormat('dd MMM yyyy').format(student.dob),
-                      ),
-                      _buildInfoRow(
-                        Icons.phone_outlined,
-                        'Phone',
-                        student.phoneNumber,
-                        isLast: true,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Attendance Card
-          _buildSectionHeader('Attendance'),
-          const SizedBox(height: 12),
-          _buildAttendanceCard(Get.find<ParentAuthController>()),
-          const SizedBox(height: 20),
-
-          // Sabak Section
-          _buildSectionHeader('Recent Sabak'),
-          const SizedBox(height: 12),
-          _buildSabakSection(Get.find<ParentAuthController>()),
-          const SizedBox(height: 20),
-
-          // Complaints Section
-          _buildSectionHeader('Complaints'),
-          const SizedBox(height: 12),
-          _buildComplaintsSection(Get.find<ParentAuthController>()),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
+  // ══════════════════════════════════════════════════════════════════════════
+  // SHARED WIDGETS
+  // ══════════════════════════════════════════════════════════════════════════
 
   Widget _buildInfoRow(
     IconData icon,
@@ -1215,7 +1296,7 @@ class DashboardScreen extends StatelessWidget {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'Received',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
@@ -1443,8 +1524,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // ── NEW SECTIONS FOR PROFILE TAB ──────────────────────────────────────────
-
   Widget _buildAttendanceCard(ParentAuthController controller) {
     return Obx(() {
       final present = controller.presentAttendanceCount.value;
@@ -1558,113 +1637,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSabakSection(ParentAuthController controller) {
-    return Obx(() {
-      if (controller.sabakList.isEmpty) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 30),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.menu_book_outlined,
-                size: 40,
-                color: Colors.grey.shade300,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No Sabak records found.',
-                style: TextStyle(color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-        );
-      }
-
-      return ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: controller.sabakList.length > 5
-            ? 5
-            : controller.sabakList.length, // Show top 5
-        itemBuilder: (context, index) {
-          final sabak = controller.sabakList[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-              boxShadow: [
-                BoxShadow(
-                  color: kNavy.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: kNavy.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.book_outlined, color: kNavy),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Para No: ${sabak.paraNo}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: kNavy,
-                            ),
-                          ),
-                          Text(
-                            DateFormat('dd MMM').format(sabak.createdAt),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        sabak.sabakText,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    });
-  }
-
   Widget _buildComplaintsSection(ParentAuthController controller) {
     return Obx(() {
       if (controller.complaintsList.isEmpty) {
@@ -1759,9 +1731,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.only(
-                    left: 32,
-                  ), // Align with text above
+                  padding: const EdgeInsets.only(left: 32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

@@ -32,6 +32,9 @@ class ParentAuthController extends GetxController {
   var presentAttendanceCount = 0.obs;
   var absentAttendanceCount = 0.obs;
   StreamSubscription? _notificationSubscription;
+  StreamSubscription? _sabakSubscription;
+  StreamSubscription? _complaintsSubscription;
+
   var schoolClassName = ''.obs;
   var deeniyatClassName = ''.obs;
   var totalDays = '';
@@ -294,6 +297,11 @@ class ParentAuthController extends GetxController {
     totalDays = '';
     _notificationSubscription?.cancel();
     _notificationSubscription = null;
+    _sabakSubscription?.cancel();
+    _sabakSubscription = null;
+    _complaintsSubscription?.cancel();
+    _complaintsSubscription = null;
+
     Get.offAllNamed(AppRoutes.login);
   }
 
@@ -375,65 +383,110 @@ class ParentAuthController extends GetxController {
 
       if (totalDaysDoc.exists)
         totalDays = totalDaysDoc.data()?['days']?.toString() ?? '';
-      // 4. Sabak (CLEAN FIXED VERSION)
+      // 4. Sabak (Real-time Stream)
+      fetchSabakStream(sId);
 
-      final sabSnap = await FBFireStore.sabaks
-          .where('studentId', isEqualTo: currentStudent!.docId)
-          .get();
-
-      print("Sabak Query StudentId: ${currentStudent!.docId}");
-      print("Sabak Docs Found: ${sabSnap.docs.length}");
-
-      sabakList.value =
-          sabSnap.docs.map((e) => Sabakmodel.fromSnapshot(e)).toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      // 5. Complaints (Robust Strategy)
-      final List<Future<QuerySnapshot<Map<String, dynamic>>>> cmpFutures = [
-        FBFireStore.complaints.where('studentId', isEqualTo: sId).get(),
-        FBFireStore.complaints.where('studId', isEqualTo: sId).get(),
-        FBFireStore.complaints
-            .where('studentId', isEqualTo: currentStudent!.grNO)
-            .get(),
-        FBFireStore.complaints
-            .where('studId', isEqualTo: currentStudent!.grNO)
-            .get(),
-      ];
-
-      // Numeric fallbacks for Complaints
-      if (RegExp(r'^\d+$').hasMatch(currentStudent!.grNO)) {
-        final grInt = int.parse(currentStudent!.grNO);
-        cmpFutures.add(
-          FBFireStore.complaints.where('studentId', isEqualTo: grInt).get(),
-        );
-        cmpFutures.add(
-          FBFireStore.complaints.where('studId', isEqualTo: grInt).get(),
-        );
-      }
-
-      final cmpSnaps = await Future.wait(cmpFutures);
-
-      final allCmpDocs = cmpSnaps.expand((s) => s.docs).toList();
-      final seenCmpIds = <String>{};
-      complaintsList.value =
-          allCmpDocs
-              .where((doc) => seenCmpIds.add(doc.id))
-              .map((e) => Complaintmodel.fromSnapshot(e))
-              .toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // 5. Complaints (Real-time Stream)
+      fetchComplaintsStream(sId);
 
       // 6. Attendance
       final attResults = await Future.wait([
         FBFireStore.attendance.where('presentStudId', arrayContains: sId).get(),
         FBFireStore.attendance.where('absentStudId', arrayContains: sId).get(),
       ]);
-      presentAttendanceCount.value = attResults[0].docs.length;
-      absentAttendanceCount.value = attResults[1].docs.length;
+
+      final presentDates = <String>{};
+      for (var doc in attResults[0].docs) {
+        final stamp = doc.data()['dateTime'] as Timestamp?;
+        if (stamp != null) {
+          final d = stamp.toDate();
+          presentDates.add(
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}',
+          );
+        }
+      }
+
+      final absentDates = <String>{};
+      for (var doc in attResults[1].docs) {
+        final stamp = doc.data()['dateTime'] as Timestamp?;
+        if (stamp != null) {
+          final d = stamp.toDate();
+          final dateStr =
+              '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+          // Ensure that if a student is counted as present for any subject on this day,
+          // they are not counted as absent for the day.
+          if (!presentDates.contains(dateStr)) {
+            absentDates.add(dateStr);
+          }
+        }
+      }
+
+      presentAttendanceCount.value = presentDates.length;
+      absentAttendanceCount.value = absentDates.length;
 
       fetchNotifications(sId);
     } catch (e) {
       debugPrint('Error fetching student data: $e');
     }
+  }
+
+  // ── Sabak (real-time stream) ─────────────────────────────────────────────
+  void fetchSabakStream(String studentId) {
+    _sabakSubscription?.cancel();
+    _sabakSubscription = FBFireStore.sabaks
+        .where('studentId', isEqualTo: studentId)
+        .snapshots()
+        .listen((snap) {
+          sabakList.value =
+              snap.docs.map((e) => Sabakmodel.fromSnapshot(e)).toList()
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          update();
+        });
+  }
+
+  // ── Complaints (real-time stream) ────────────────────────────────────────
+  void fetchComplaintsStream(String studentId) {
+    _complaintsSubscription?.cancel();
+
+    final s1 = FBFireStore.complaints
+        .where('studentId', isEqualTo: studentId)
+        .snapshots();
+    final s2 = FBFireStore.complaints
+        .where('studId', isEqualTo: studentId)
+        .snapshots();
+    final s3 = FBFireStore.complaints
+        .where('studentId', isEqualTo: currentStudent!.grNO)
+        .snapshots();
+    final s4 = FBFireStore.complaints
+        .where('studId', isEqualTo: currentStudent!.grNO)
+        .snapshots();
+
+    _complaintsSubscription =
+        rx.Rx.combineLatest4(s1, s2, s3, s4, (
+          QuerySnapshot q1,
+          QuerySnapshot q2,
+          QuerySnapshot q3,
+          QuerySnapshot q4,
+        ) {
+          final List<Complaintmodel> combined = [];
+          final Set<String> ids = {};
+          void add(QuerySnapshot s) {
+            for (var d in s.docs) {
+              if (ids.add(d.id)) {
+                combined.add(Complaintmodel.fromSnapshot(d));
+              }
+            }
+          }
+
+          add(q1);
+          add(q2);
+          add(q3);
+          add(q4);
+          combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return combined;
+        }).listen((list) {
+          complaintsList.value = list;
+        });
   }
 
   // ── Notifications (real-time, leak-safe) ─────────────────────────────────
@@ -493,6 +546,7 @@ class ParentAuthController extends GetxController {
     if (notif == null) return;
 
     if (notif.targetType == 'all') {
+      if (currentStudent == null) return;
       await FirebaseFirestore.instance
           .collection('notifications')
           .doc(notificationId)

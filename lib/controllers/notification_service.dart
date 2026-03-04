@@ -113,6 +113,8 @@ class NotificationService extends GetxService {
       Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 1});
     } else if (type == 'sabak' || type == 'complaint') {
       Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 0});
+    } else if (type == 'unpaid_fee') {
+      Get.offAllNamed(AppRoutes.dashboard, arguments: {'tab': 2});
     } else {
       final noticeId = data['noticeId'];
       if (noticeId != null) {

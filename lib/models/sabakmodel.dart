@@ -5,7 +5,7 @@ class Sabakmodel {
   final String sabakId;
   final String studentId;
   final String ustadId;
-  final String paraNo;
+  final String bookName;
   final String sabakText;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -15,7 +15,7 @@ class Sabakmodel {
     required this.sabakId,
     required this.studentId,
     required this.ustadId,
-    required this.paraNo,
+    required this.bookName,
     required this.sabakText,
     required this.createdAt,
     required this.updatedAt,
@@ -26,7 +26,7 @@ class Sabakmodel {
       'sabakId': sabakId,
       'studentId': studentId,
       'ustadId': ustadId,
-      'paraNo': paraNo,
+      'bookName': bookName,
       'sabakText': sabakText,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -46,7 +46,7 @@ class Sabakmodel {
           data['grNo'] ??
           '',
       ustadId: data['ustadId'] ?? data['teacherId'] ?? '',
-      paraNo: data['paraNo']?.toString() ?? '',
+      bookName: data['bookName']?.toString() ?? '',
       sabakText: data['sabakText'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

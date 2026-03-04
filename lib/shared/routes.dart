@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:riyazul_parent/views/sabaklistscreen.dart';
 import 'package:riyazul_parent/views/splash_screen.dart';
 import 'package:riyazul_parent/views/login_screen.dart';
 import 'package:riyazul_parent/views/dashboard_screen.dart';
@@ -13,6 +14,7 @@ class AppRoutes {
   static const String noticeList = '/noticeList';
   static const String noticeDetail = '/noticeDetail';
   static const String pdfViewer = '/pdfViewer';
+  static const String sabakList = '/sabakList';
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -21,5 +23,6 @@ class AppRoutes {
     GetPage(name: noticeList, page: () => const NoticeListScreen()),
     GetPage(name: noticeDetail, page: () => const NoticeDetailScreen()),
     GetPage(name: pdfViewer, page: () => const PDFViewerScreen()),
+    GetPage(name: sabakList, page: () => const SabakListScreen()),
   ];
 }
