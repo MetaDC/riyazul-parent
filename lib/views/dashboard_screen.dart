@@ -4,6 +4,7 @@ import 'package:riyazul_parent/controllers/parent_auth_controller.dart';
 import 'package:riyazul_parent/controllers/notice_controller.dart';
 import 'package:riyazul_parent/shared/routes.dart';
 import 'package:intl/intl.dart';
+import 'package:riyazul_parent/models/resultmodel.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -798,6 +799,9 @@ class DashboardScreen extends StatelessWidget {
         itemCount: controller.studentResults.length,
         itemBuilder: (context, index) {
           final result = controller.studentResults[index];
+          if (result.courseType == 'School Test') {
+            return _buildSchoolTestCard(result);
+          }
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
@@ -829,7 +833,7 @@ class DashboardScreen extends StatelessWidget {
                   child: const Icon(Icons.grading, color: kCream, size: 22),
                 ),
                 title: Text(
-                  result.title,
+                  result.courseType,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: kNavy,
@@ -983,19 +987,19 @@ class DashboardScreen extends StatelessWidget {
                                           ],
                                         ],
                                       ),
-                                      if (sub.gRemarks.isNotEmpty)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 2,
-                                          ),
-                                          child: Text(
-                                            sub.gRemarks,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                          ),
-                                        ),
+                                      // if (sub.gRemarks.isNotEmpty)
+                                      //   Padding(
+                                      //     padding: const EdgeInsets.only(
+                                      //       top: 2,
+                                      //     ),
+                                      //     child: Text(
+                                      //       sub.gRemarks,
+                                      //       style: TextStyle(
+                                      //         fontSize: 11,
+                                      //         color: Colors.grey.shade500,
+                                      //       ),
+                                      //     ),
+                                      //   ),
                                     ],
                                   ),
                                 ),
@@ -1098,6 +1102,264 @@ class DashboardScreen extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+      ),
+    );
+  }
+
+  // ── School Test special card ────────────────────────────────────────────
+  Widget _buildSchoolTestCard(Resultmodel result) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200),
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: kNavy.withOpacity(0.06),
+        //     blurRadius: 10,
+        //     offset: const Offset(0, 4),
+        //   ),
+        // ],
+      ),
+      child: Theme(
+        data: ThemeData(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          childrenPadding: EdgeInsets.zero,
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xff3949AB), Color(0xff5C6BC0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.edit_note_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          title: Text(
+            result.courseType,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: kNavy,
+              fontSize: 15,
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                _buildSmallChip(
+                  result.academicYear,
+                  Icons.calendar_today_outlined,
+                ),
+                _buildSmallChip(result.className, Icons.school_outlined),
+                // if (result.presentDays.isNotEmpty)
+                //   _buildSmallChip(
+                //     'Present: \${result.presentDays}',
+                //     Icons.event_available_outlined,
+                //   ),
+              ],
+            ),
+          ),
+          iconColor: const Color(0xff3949AB),
+          collapsedIconColor: const Color(0xff3949AB),
+          children: [
+            const SizedBox(height: 8),
+            // Table header
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xff3949AB).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Subject',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xff3949AB),
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  _buildSchoolTestHeader('Total\nMarks'),
+                  _buildSchoolTestHeader('Obtained\nMarks'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Subject rows
+            ...result.subjects.asMap().entries.map((entry) {
+              final sub = entry.value;
+              final isLast = entry.key == result.subjects.length - 1;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    sub.subName,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                if (sub.isOptional) ...[
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'Opt',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          // Total marks pill
+                          SizedBox(
+                            width: 64,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xff3949AB,
+                                  ).withOpacity(0.09),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  sub.subMarks.isEmpty ? '-' : sub.subMarks,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xff3949AB),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Obtained marks (sem1Marks)
+                          SizedBox(
+                            width: 64,
+                            child: Center(
+                              child: Text(
+                                sub.sem1Marks.isEmpty ? '-' : sub.sem1Marks,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isLast)
+                      Divider(height: 1, color: Colors.grey.shade100),
+                  ],
+                ),
+              );
+            }),
+            // Total row
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: const Color(0xff3949AB).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total Marks',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff3949AB),
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    result.totalMarks.isEmpty ? '-' : result.totalMarks,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xff3949AB),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSchoolTestHeader(String label) {
+    return SizedBox(
+      width: 64,
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Color(0xff3949AB),
+          letterSpacing: 0.3,
+          height: 1.3,
+        ),
       ),
     );
   }

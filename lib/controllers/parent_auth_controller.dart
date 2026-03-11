@@ -34,6 +34,7 @@ class ParentAuthController extends GetxController {
   StreamSubscription? _notificationSubscription;
   StreamSubscription? _sabakSubscription;
   StreamSubscription? _complaintsSubscription;
+  StreamSubscription? _resultSubscription;
 
   var schoolClassName = ''.obs;
   var deeniyatClassName = ''.obs;
@@ -301,6 +302,9 @@ class ParentAuthController extends GetxController {
     _sabakSubscription = null;
     _complaintsSubscription?.cancel();
     _complaintsSubscription = null;
+    _resultSubscription?.cancel();
+    _resultSubscription = null;
+    studentResults.clear();
 
     Get.offAllNamed(AppRoutes.login);
   }
@@ -310,36 +314,8 @@ class ParentAuthController extends GetxController {
     final String sId = currentStudent!.docId;
 
     try {
-      final List<Future<QuerySnapshot<Map<String, dynamic>>>> resFutures = [
-        FBFireStore.results.where('studentId', isEqualTo: sId).get(),
-        FBFireStore.results.where('studId', isEqualTo: sId).get(),
-        FBFireStore.results
-            .where('studentId', isEqualTo: currentStudent!.grNO)
-            .get(),
-        FBFireStore.results
-            .where('studId', isEqualTo: currentStudent!.grNO)
-            .get(),
-      ];
-
-      // Numeric fallbacks for Results
-      if (RegExp(r'^\d+$').hasMatch(currentStudent!.grNO)) {
-        final grInt = int.parse(currentStudent!.grNO);
-        resFutures.add(
-          FBFireStore.results.where('studentId', isEqualTo: grInt).get(),
-        );
-        resFutures.add(
-          FBFireStore.results.where('studId', isEqualTo: grInt).get(),
-        );
-      }
-
-      final resSnaps = await Future.wait(resFutures);
-
-      final allResDocs = resSnaps.expand((s) => s.docs).toList();
-      final seenResIds = <String>{};
-      studentResults.value = allResDocs
-          .where((doc) => seenResIds.add(doc.id))
-          .map((e) => Resultmodel.fromSnapshot(e))
-          .toList();
+      // Results – real-time stream so admin changes appear instantly
+      fetchResultsStream(sId);
 
       // 2. Fetch Fees (Check both labels)
       final feeResults = await Future.wait([
@@ -428,6 +404,51 @@ class ParentAuthController extends GetxController {
     } catch (e) {
       debugPrint('Error fetching student data: $e');
     }
+  }
+
+  // ── Results (real-time stream) ──────────────────────────────────────────
+  void fetchResultsStream(String studentId) {
+    _resultSubscription?.cancel();
+
+    final s1 = FBFireStore.results
+        .where('studentId', isEqualTo: studentId)
+        .snapshots();
+    final s2 = FBFireStore.results
+        .where('studId', isEqualTo: studentId)
+        .snapshots();
+    final s3 = FBFireStore.results
+        .where('studentId', isEqualTo: currentStudent!.grNO)
+        .snapshots();
+    final s4 = FBFireStore.results
+        .where('studId', isEqualTo: currentStudent!.grNO)
+        .snapshots();
+
+    _resultSubscription =
+        rx.Rx.combineLatest4(s1, s2, s3, s4, (
+          QuerySnapshot q1,
+          QuerySnapshot q2,
+          QuerySnapshot q3,
+          QuerySnapshot q4,
+        ) {
+          final List<Resultmodel> combined = [];
+          final Set<String> ids = {};
+          void add(QuerySnapshot s) {
+            for (var d in s.docs) {
+              if (ids.add(d.id)) {
+                combined.add(Resultmodel.fromSnapshot(d));
+              }
+            }
+          }
+
+          add(q1);
+          add(q2);
+          add(q3);
+          add(q4);
+          combined.sort((a, b) => b.resultDate.compareTo(a.resultDate));
+          return combined;
+        }).listen((list) {
+          studentResults.value = list;
+        });
   }
 
   // ── Sabak (real-time stream) ─────────────────────────────────────────────
