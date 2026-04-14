@@ -123,6 +123,9 @@ class ParentAuthController extends GetxController {
     bool fromAutoLogin = false,
   }) async {
     try {
+      print("Login Attempt");
+      print("GR No: $grNo");
+      print("DOB: $dob");
       isLoading.value = true;
 
       List<QueryDocumentSnapshot<Map<String, dynamic>>> studentDocs = [];

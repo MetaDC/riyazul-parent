@@ -65,10 +65,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBCnnNVh39Gpqm8LFp-71Mc3CNVkfK0K6o',
-    appId: '1:1092431311310:ios:582dc2b479a9e243603b9f',
+    appId: '1:1092431311310:ios:1a144a0e83194247603b9f',
     messagingSenderId: '1092431311310',
     projectId: 'jamiah-riyazul',
     storageBucket: 'jamiah-riyazul.firebasestorage.app',
-    iosBundleId: 'com.riyazulParent',
+    iosBundleId: 'com.diwizon.rparent',
   );
+
 }

@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.riyazulParent</string>
+	<string>com.diwizon.rparent</string>
 	<key>PROJECT_ID</key>
 	<string>jamiah-riyazul</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:1092431311310:ios:582dc2b479a9e243603b9f</string>
+	<string>1:1092431311310:ios:1a144a0e83194247603b9f</string>
 </dict>
 </plist>

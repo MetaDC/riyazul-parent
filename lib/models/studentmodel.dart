@@ -1,13 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Converts a Firestore Timestamp DOB to a UTC-midnight DateTime.
-/// Using .toDate() is timezone-sensitive — e.g. a DOB stored as midnight
-/// in IST becomes 18:30 the *previous day* in UTC, so a UK device would
-/// parse it as the wrong date. Reading the UTC components directly avoids this.
+///
+/// DOBs are stored as midnight in IST (UTC+5:30), so the raw UTC value is
+/// the *previous* day at 18:30. On a device in UTC-5 (USA) that becomes
+/// 13:30 the previous day — i.e. the wrong calendar date.
+///
+/// Fix: shift by +12 hours in UTC before reading the date components.
+/// Since the maximum timezone offset is ±14 h, a "midnight" timestamp stored
+/// in *any* timezone will land within ±14 h of true midnight UTC.  Adding
+/// 12 h snaps it unambiguously to the correct calendar day regardless of the
+/// reader's locale.
+///   IST midnight → UTC 18:30 → +12 h → next-day 06:30 → correct date ✓
+///   UTC midnight → UTC 00:00 → +12 h → same-day  12:00 → correct date ✓
+///   UTC-5 midnight → UTC 05:00 → +12 h → same-day 17:00 → correct date ✓
 DateTime _dobFromTimestamp(Timestamp? ts) {
   if (ts == null) return DateTime.utc(2000);
-  final d = ts.toDate(); // Use local time components to avoid date shift
-  return DateTime.utc(d.year, d.month, d.day);
+  final utcSnapped = ts.toDate().toUtc().add(const Duration(hours: 12));
+  return DateTime.utc(utcSnapped.year, utcSnapped.month, utcSnapped.day);
 }
 
 class Studentmodel {
