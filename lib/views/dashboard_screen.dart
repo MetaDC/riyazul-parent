@@ -1366,17 +1366,58 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildFeesSection(ParentAuthController controller) {
     return Obx(() {
-      if (controller.studentFees.isEmpty) {
-        return _buildEmptyState(
-          icon: Icons.receipt_long_outlined,
-          message: 'No fee records found for this student.',
+      if (controller.isFeesLoading.value && controller.studentFees.isEmpty) {
+        return const Center(
+          child: CircularProgressIndicator(color: kNavy),
         );
       }
-      return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        itemCount: controller.studentFees.length,
-        itemBuilder: (context, index) {
-          final feeTx = controller.studentFees[index];
+
+      if (controller.studentFees.isEmpty) {
+        return RefreshIndicator(
+          onRefresh: () => controller.fetchFees(isRefresh: true),
+          color: kNavy,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              const SizedBox(height: 100),
+              _buildEmptyState(
+                icon: Icons.receipt_long_outlined,
+                message: 'No fee records found for this student.',
+              ),
+            ],
+          ),
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: () => controller.fetchFees(isRefresh: true),
+        color: kNavy,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification scrollInfo) {
+            if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200) {
+              controller.fetchMoreFees();
+            }
+            return false;
+          },
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            itemCount:
+                controller.studentFees.length +
+                (controller.hasMoreFees.value ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == controller.studentFees.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: controller.isMoreFeesLoading.value
+                        ? const CircularProgressIndicator(color: kNavy)
+                        : const SizedBox.shrink(),
+                  ),
+                );
+              }
+              final feeTx = controller.studentFees[index];
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
@@ -1665,9 +1706,11 @@ class DashboardScreen extends StatelessWidget {
             ),
           );
         },
-      );
-    });
-  }
+      ),
+    ),
+  );
+});
+}
 
   Widget _buildTwoColRow(Widget left, Widget right) {
     return Row(

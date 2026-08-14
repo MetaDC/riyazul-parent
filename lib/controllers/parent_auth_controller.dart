@@ -8,6 +8,7 @@ import 'package:riyazul_parent/models/feeTransactionmodel.dart';
 import 'package:riyazul_parent/models/resultmodel.dart';
 import 'package:riyazul_parent/models/classmodel.dart';
 import 'package:riyazul_parent/models/sabakmodel.dart';
+import 'package:riyazul_parent/models/studentnotemodel.dart';
 import 'package:riyazul_parent/models/complaintmodel.dart';
 import 'package:riyazul_parent/shared/firebase.dart';
 import 'package:flutter/material.dart';
@@ -27,12 +28,25 @@ class ParentAuthController extends GetxController {
   final RxList<NotificationModel> notifications = <NotificationModel>[].obs;
   final RxInt unreadCount = 0.obs;
 
+  var isFeesLoading = false.obs;
+  var isMoreFeesLoading = false.obs;
+  var hasMoreFees = true.obs;
+
+  DocumentSnapshot? _lastFeeDocStudId;
+  DocumentSnapshot? _lastFeeDocStudentId;
+  bool _hasMoreStudId = true;
+  bool _hasMoreStudentId = true;
+  final Set<String> _seenFeeIds = <String>{};
+  static const int _feePageSize = 10;
+
   var sabakList = <Sabakmodel>[].obs;
+  var studentNotesList = <StudentNoteModel>[].obs;
   var complaintsList = <Complaintmodel>[].obs;
   var presentAttendanceCount = 0.obs;
   var absentAttendanceCount = 0.obs;
   StreamSubscription? _notificationSubscription;
   StreamSubscription? _sabakSubscription;
+  StreamSubscription? _studentNotesSubscription;
   StreamSubscription? _complaintsSubscription;
   StreamSubscription? _resultSubscription;
 
@@ -292,7 +306,16 @@ class ParentAuthController extends GetxController {
     currentStudent = null;
     studentResults.clear();
     studentFees.clear();
+    _seenFeeIds.clear();
+    _lastFeeDocStudId = null;
+    _lastFeeDocStudentId = null;
+    _hasMoreStudId = true;
+    _hasMoreStudentId = true;
+    hasMoreFees.value = true;
+    isFeesLoading.value = false;
+    isMoreFeesLoading.value = false;
     sabakList.clear();
+    studentNotesList.clear();
     complaintsList.clear();
     presentAttendanceCount.value = 0;
     absentAttendanceCount.value = 0;
@@ -303,6 +326,8 @@ class ParentAuthController extends GetxController {
     _notificationSubscription = null;
     _sabakSubscription?.cancel();
     _sabakSubscription = null;
+    _studentNotesSubscription?.cancel();
+    _studentNotesSubscription = null;
     _complaintsSubscription?.cancel();
     _complaintsSubscription = null;
     _resultSubscription?.cancel();
@@ -320,21 +345,8 @@ class ParentAuthController extends GetxController {
       // Results – real-time stream so admin changes appear instantly
       fetchResultsStream(sId);
 
-      // 2. Fetch Fees (Check both labels)
-      final feeResults = await Future.wait([
-        FBFireStore.feetranscationdetails.where('studId', isEqualTo: sId).get(),
-        FBFireStore.feetranscationdetails
-            .where('studentId', isEqualTo: sId)
-            .get(),
-      ]);
-      final allFeeDocs = [...feeResults[0].docs, ...feeResults[1].docs];
-      final seenFeeIds = <String>{};
-      studentFees.value =
-          allFeeDocs
-              .where((doc) => seenFeeIds.add(doc.id))
-              .map((e) => Feetransactionmodel.fromSnapshot(e))
-              .toList()
-            ..sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
+      // 2. Fetch Fees (Paginated - initial 10 records)
+      await fetchFees(isRefresh: true);
 
       // 3. Fetch Classes & Settings individually to avoid Future.wait type conflicts
       // ✅ FIX: Typed as DocumentSnapshot<Map<String,dynamic>> to match ClassModel.fromSnapshot
@@ -362,8 +374,9 @@ class ParentAuthController extends GetxController {
 
       if (totalDaysDoc.exists)
         totalDays = totalDaysDoc.data()?['days']?.toString() ?? '';
-      // 4. Sabak (Real-time Stream)
+      // 4. Sabak & Student Notes / Quran Records (Real-time Stream)
       fetchSabakStream(sId);
+      fetchStudentNotesStream(sId);
 
       // 5. Complaints (Real-time Stream)
       fetchComplaintsStream(sId);
@@ -464,6 +477,20 @@ class ParentAuthController extends GetxController {
           sabakList.value =
               snap.docs.map((e) => Sabakmodel.fromSnapshot(e)).toList()
                 ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          update();
+        });
+  }
+
+  // ── Student Notes / Quran Records (real-time stream) ───────────────────
+  void fetchStudentNotesStream(String studentId) {
+    _studentNotesSubscription?.cancel();
+    _studentNotesSubscription = FBFireStore.studentNotes
+        .where('studentId', isEqualTo: studentId)
+        .snapshots()
+        .listen((snap) {
+          studentNotesList.value =
+              snap.docs.map((e) => StudentNoteModel.fromSnapshot(e)).toList()
+                ..sort((a, b) => b.date.compareTo(a.date));
           update();
         });
   }
@@ -613,5 +640,112 @@ class ParentAuthController extends GetxController {
     }
 
     await batch.commit();
+  }
+
+  // ── Fee Pagination Methods ────────────────────────────────────────────────
+  Future<void> fetchFees({bool isRefresh = false}) async {
+    if (currentStudent == null) return;
+    final String sId = currentStudent!.docId;
+
+    if (isRefresh) {
+      isFeesLoading.value = true;
+      studentFees.clear();
+      _seenFeeIds.clear();
+      _lastFeeDocStudId = null;
+      _lastFeeDocStudentId = null;
+      _hasMoreStudId = true;
+      _hasMoreStudentId = true;
+      hasMoreFees.value = true;
+    }
+
+    try {
+      final List<Future<QuerySnapshot>?> futures = [];
+
+      if (_hasMoreStudId) {
+        Query queryStudId = FBFireStore.feetranscationdetails
+            .where('studId', isEqualTo: sId)
+            .limit(_feePageSize);
+        if (_lastFeeDocStudId != null) {
+          queryStudId = queryStudId.startAfterDocument(_lastFeeDocStudId!);
+        }
+        futures.add(queryStudId.get());
+      } else {
+        futures.add(null);
+      }
+
+      if (_hasMoreStudentId) {
+        Query queryStudentId = FBFireStore.feetranscationdetails
+            .where('studentId', isEqualTo: sId)
+            .limit(_feePageSize);
+        if (_lastFeeDocStudentId != null) {
+          queryStudentId = queryStudentId.startAfterDocument(_lastFeeDocStudentId!);
+        }
+        futures.add(queryStudentId.get());
+      } else {
+        futures.add(null);
+      }
+
+      final results = await Future.wait([
+        futures[0] ?? Future.value(null),
+        futures[1] ?? Future.value(null),
+      ]);
+
+      final QuerySnapshot? snapStudId = results[0];
+      final QuerySnapshot? snapStudentId = results[1];
+
+      final List<DocumentSnapshot> newDocs = [];
+
+      if (snapStudId != null) {
+        if (snapStudId.docs.isNotEmpty) {
+          _lastFeeDocStudId = snapStudId.docs.last;
+          newDocs.addAll(snapStudId.docs);
+        }
+        if (snapStudId.docs.length < _feePageSize) {
+          _hasMoreStudId = false;
+        }
+      }
+
+      if (snapStudentId != null) {
+        if (snapStudentId.docs.isNotEmpty) {
+          _lastFeeDocStudentId = snapStudentId.docs.last;
+          newDocs.addAll(snapStudentId.docs);
+        }
+        if (snapStudentId.docs.length < _feePageSize) {
+          _hasMoreStudentId = false;
+        }
+      }
+
+      if (!_hasMoreStudId && !_hasMoreStudentId) {
+        hasMoreFees.value = false;
+      }
+
+      final newItems = <Feetransactionmodel>[];
+      for (final doc in newDocs) {
+        if (_seenFeeIds.add(doc.id)) {
+          newItems.add(Feetransactionmodel.fromSnapshot(doc));
+        }
+      }
+
+      if (isRefresh) {
+        studentFees.value = newItems
+          ..sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
+      } else {
+        studentFees.addAll(newItems);
+        studentFees.sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
+      }
+    } catch (e) {
+      print('Error fetching fees: $e');
+    } finally {
+      isFeesLoading.value = false;
+      isMoreFeesLoading.value = false;
+    }
+  }
+
+  Future<void> fetchMoreFees() async {
+    if (isMoreFeesLoading.value || !hasMoreFees.value || isFeesLoading.value) {
+      return;
+    }
+    isMoreFeesLoading.value = true;
+    await fetchFees(isRefresh: false);
   }
 }
