@@ -49,6 +49,7 @@ class ParentAuthController extends GetxController {
   StreamSubscription? _studentNotesSubscription;
   StreamSubscription? _complaintsSubscription;
   StreamSubscription? _resultSubscription;
+  StreamSubscription? _feesSubscription;
 
   var schoolClassName = ''.obs;
   var deeniyatClassName = ''.obs;
@@ -332,6 +333,8 @@ class ParentAuthController extends GetxController {
     _complaintsSubscription = null;
     _resultSubscription?.cancel();
     _resultSubscription = null;
+    _feesSubscription?.cancel();
+    _feesSubscription = null;
     studentResults.clear();
 
     Get.offAllNamed(AppRoutes.login);
@@ -345,8 +348,8 @@ class ParentAuthController extends GetxController {
       // Results – real-time stream so admin changes appear instantly
       fetchResultsStream(sId);
 
-      // 2. Fetch Fees (Paginated - initial 10 records)
-      await fetchFees(isRefresh: true);
+      // Fees – real-time stream so status changes (isActive) appear instantly
+      fetchFeesStream(sId);
 
       // 3. Fetch Classes & Settings individually to avoid Future.wait type conflicts
       // ✅ FIX: Typed as DocumentSnapshot<Map<String,dynamic>> to match ClassModel.fromSnapshot
@@ -642,110 +645,72 @@ class ParentAuthController extends GetxController {
     await batch.commit();
   }
 
-  // ── Fee Pagination Methods ────────────────────────────────────────────────
+  // ── Fees (real-time stream) ─────────────────────────────────────────────
+  void fetchFeesStream(String studentId) {
+    _feesSubscription?.cancel();
+    isFeesLoading.value = true;
+    hasMoreFees.value = false;
+
+    final s1 = FBFireStore.feetranscationdetails
+        .where('studId', isEqualTo: studentId)
+        .snapshots();
+    final s2 = FBFireStore.feetranscationdetails
+        .where('studentId', isEqualTo: studentId)
+        .snapshots();
+
+    final List<Stream<QuerySnapshot>> streams = [s1, s2];
+
+    if (currentStudent?.grNO.isNotEmpty ?? false) {
+      streams.add(
+        FBFireStore.feetranscationdetails
+            .where('studId', isEqualTo: currentStudent!.grNO)
+            .snapshots(),
+      );
+      streams.add(
+        FBFireStore.feetranscationdetails
+            .where('studentId', isEqualTo: currentStudent!.grNO)
+            .snapshots(),
+      );
+    }
+
+    _feesSubscription = rx.Rx.combineLatest<QuerySnapshot, List<Feetransactionmodel>>(
+      streams,
+      (List<QuerySnapshot> snapshots) {
+        final List<Feetransactionmodel> combined = [];
+        final Set<String> ids = {};
+        for (var snap in snapshots) {
+          for (var doc in snap.docs) {
+            if (ids.add(doc.id)) {
+              final feeTx = Feetransactionmodel.fromSnapshot(doc);
+              if (feeTx.isActive) {
+                combined.add(feeTx);
+              }
+            }
+          }
+        }
+        combined.sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
+        return combined;
+      },
+    ).listen(
+      (list) {
+        studentFees.value = list;
+        isFeesLoading.value = false;
+        isMoreFeesLoading.value = false;
+      },
+      onError: (e) {
+        debugPrint('Error in fees stream: $e');
+        isFeesLoading.value = false;
+        isMoreFeesLoading.value = false;
+      },
+    );
+  }
+
   Future<void> fetchFees({bool isRefresh = false}) async {
     if (currentStudent == null) return;
-    final String sId = currentStudent!.docId;
-
-    if (isRefresh) {
-      isFeesLoading.value = true;
-      studentFees.clear();
-      _seenFeeIds.clear();
-      _lastFeeDocStudId = null;
-      _lastFeeDocStudentId = null;
-      _hasMoreStudId = true;
-      _hasMoreStudentId = true;
-      hasMoreFees.value = true;
-    }
-
-    try {
-      final List<Future<QuerySnapshot>?> futures = [];
-
-      if (_hasMoreStudId) {
-        Query queryStudId = FBFireStore.feetranscationdetails
-            .where('studId', isEqualTo: sId)
-            .limit(_feePageSize);
-        if (_lastFeeDocStudId != null) {
-          queryStudId = queryStudId.startAfterDocument(_lastFeeDocStudId!);
-        }
-        futures.add(queryStudId.get());
-      } else {
-        futures.add(null);
-      }
-
-      if (_hasMoreStudentId) {
-        Query queryStudentId = FBFireStore.feetranscationdetails
-            .where('studentId', isEqualTo: sId)
-            .limit(_feePageSize);
-        if (_lastFeeDocStudentId != null) {
-          queryStudentId = queryStudentId.startAfterDocument(_lastFeeDocStudentId!);
-        }
-        futures.add(queryStudentId.get());
-      } else {
-        futures.add(null);
-      }
-
-      final results = await Future.wait([
-        futures[0] ?? Future.value(null),
-        futures[1] ?? Future.value(null),
-      ]);
-
-      final QuerySnapshot? snapStudId = results[0];
-      final QuerySnapshot? snapStudentId = results[1];
-
-      final List<DocumentSnapshot> newDocs = [];
-
-      if (snapStudId != null) {
-        if (snapStudId.docs.isNotEmpty) {
-          _lastFeeDocStudId = snapStudId.docs.last;
-          newDocs.addAll(snapStudId.docs);
-        }
-        if (snapStudId.docs.length < _feePageSize) {
-          _hasMoreStudId = false;
-        }
-      }
-
-      if (snapStudentId != null) {
-        if (snapStudentId.docs.isNotEmpty) {
-          _lastFeeDocStudentId = snapStudentId.docs.last;
-          newDocs.addAll(snapStudentId.docs);
-        }
-        if (snapStudentId.docs.length < _feePageSize) {
-          _hasMoreStudentId = false;
-        }
-      }
-
-      if (!_hasMoreStudId && !_hasMoreStudentId) {
-        hasMoreFees.value = false;
-      }
-
-      final newItems = <Feetransactionmodel>[];
-      for (final doc in newDocs) {
-        if (_seenFeeIds.add(doc.id)) {
-          newItems.add(Feetransactionmodel.fromSnapshot(doc));
-        }
-      }
-
-      if (isRefresh) {
-        studentFees.value = newItems
-          ..sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
-      } else {
-        studentFees.addAll(newItems);
-        studentFees.sort((a, b) => b.receivedDate.compareTo(a.receivedDate));
-      }
-    } catch (e) {
-      print('Error fetching fees: $e');
-    } finally {
-      isFeesLoading.value = false;
-      isMoreFeesLoading.value = false;
-    }
+    fetchFeesStream(currentStudent!.docId);
   }
 
   Future<void> fetchMoreFees() async {
-    if (isMoreFeesLoading.value || !hasMoreFees.value || isFeesLoading.value) {
-      return;
-    }
-    isMoreFeesLoading.value = true;
-    await fetchFees(isRefresh: false);
+    // Real-time stream handles all records
   }
 }

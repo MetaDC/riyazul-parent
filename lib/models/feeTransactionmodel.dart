@@ -14,6 +14,7 @@ class Feetransactionmodel {
   final String feeType;
   final List<Map<String, dynamic>> feeDetails;
   final String remarks;
+   final bool isActive;
 
   Feetransactionmodel({
     required this.docId,
@@ -29,6 +30,7 @@ class Feetransactionmodel {
     required this.feeType,
     required this.feeDetails,
     required this.remarks,
+    required this.isActive,
   });
 
   Map<String, dynamic> toMap() {
@@ -47,6 +49,7 @@ class Feetransactionmodel {
       'feeType': feeType,
 
       'remarks': remarks,
+      'isActive': isActive,
     };
   }
 
@@ -65,6 +68,7 @@ class Feetransactionmodel {
       feeDetails: List<Map<String, dynamic>>.from(json['feeDetails'] ?? []),
       feeType: json['feeType'] ?? '',
       remarks: json['remarks'] ?? '',
+      isActive: json['isActive'] ?? true,
     );
   }
 
@@ -95,6 +99,7 @@ class Feetransactionmodel {
           [],
       feeType: data['feeType']?.toString() ?? '',
       remarks: data['remarks']?.toString() ?? '',
+      isActive: data['isActive'] ?? true,
     );
   }
 }
