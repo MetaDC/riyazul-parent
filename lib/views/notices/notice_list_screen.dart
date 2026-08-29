@@ -60,6 +60,7 @@ class NoticeListScreen extends StatelessWidget {
 
             return Card(
               elevation: 2,
+              clipBehavior: Clip.antiAlias,
               margin: const EdgeInsets.only(bottom: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

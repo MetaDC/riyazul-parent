@@ -13,8 +13,12 @@ class NotificationService extends GetxService {
   static const String channelName = 'School Notices';
 
   Future<NotificationService> init() async {
-    await _setupLocalNotifications();
-    await _setupFCM();
+    try {
+      await _setupLocalNotifications();
+      await _setupFCM();
+    } catch (e) {
+      // Ignored or logged to prevent startup block
+    }
     return this;
   }
 

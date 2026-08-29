@@ -99,7 +99,26 @@ class Feetransactionmodel {
           [],
       feeType: data['feeType']?.toString() ?? '',
       remarks: data['remarks']?.toString() ?? '',
-      isActive: data['isActive'] ?? true,
+      isActive: _parseIsActive(data),
     );
+  }
+
+  static bool _parseIsActive(Map<String, dynamic> data) {
+    if (data['isDeleted'] == true || data['isDeleted']?.toString() == 'true') return false;
+    if (data['isDeactive'] == true || data['isDeactive']?.toString() == 'true') return false;
+    if (data['deactivated'] == true || data['deactivated']?.toString() == 'true') return false;
+    final status = data['status']?.toString().toLowerCase();
+    if (status == 'inactive' || status == 'deactive' || status == 'cancelled' || status == 'deleted') return false;
+    
+    final val = data['isActive'];
+    if (val == null) return true;
+    if (val is bool) return val;
+    if (val is num) return val != 0;
+    if (val is String) {
+      final s = val.trim().toLowerCase();
+      if (s == 'false' || s == '0' || s == 'inactive' || s == 'no') return false;
+      if (s == 'true' || s == '1' || s == 'active' || s == 'yes') return true;
+    }
+    return true;
   }
 }

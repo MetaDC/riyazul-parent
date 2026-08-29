@@ -809,14 +809,11 @@ class DashboardScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Theme(
-              data: ThemeData(
-                dividerColor: Colors.transparent,
-                focusColor: Colors.transparent,
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-              ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
               child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
                 tilePadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 childrenPadding: EdgeInsets.zero,
                 leading: Container(
@@ -1122,13 +1119,11 @@ class DashboardScreen extends StatelessWidget {
         //   ),
         // ],
       ),
-      child: Theme(
-        data: ThemeData(
-          dividerColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
         child: ExpansionTile(
+          shape: const Border(),
+          collapsedShape: const Border(),
           tilePadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           childrenPadding: EdgeInsets.zero,
           leading: Container(
@@ -1425,14 +1420,11 @@ class DashboardScreen extends StatelessWidget {
               border: Border.all(color: Colors.grey.shade200),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Theme(
-              data: ThemeData(
-                dividerColor: Colors.transparent,
-                focusColor: Colors.transparent,
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-              ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
               child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
                 tilePadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 childrenPadding: EdgeInsets.zero,
                 leading: Container(
